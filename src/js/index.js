@@ -8,6 +8,7 @@
     var bip32ExtendedKey = null;
     var network = libs.bitcoin.networks.bitcoin;
     var addressRowTemplate = $("#address-row-template");
+    var ldsWallet = null;
 
     var showIndex = true;
     var showAddress = true;
@@ -69,6 +70,7 @@
     DOM.bip49tab = $("#bip49-tab");
     DOM.bip84tab = $("#bip84-tab");
     DOM.bip141tab = $("#bip141-tab");
+    DOM.ldstab = $("#lds-tab");
     DOM.bip32panel = $("#bip32");
     DOM.bip44panel = $("#bip44");
     DOM.bip49panel = $("#bip49");
@@ -139,6 +141,18 @@
     DOM.qrImage = DOM.qrContainer.find(".qr-image");
     DOM.qrHint = DOM.qrContainer.find(".qr-hint");
     DOM.showQrEls = $("[data-show-qr]");
+    DOM.scanQr = $("#scan-qr");
+    DOM.qrScannerOverlay = $("#qr-scanner-overlay");
+    DOM.closeQrScanner = $("#close-qr-scanner");
+    DOM.seedQr = $("#seed-qr");
+    DOM.ldsLnurl = $("#lds-lnurl");
+    DOM.lightningAddress = $("#lightning-address");
+    DOM.addressProofOfOwnership = $("#address-proof-of-ownership");
+    DOM.lnhubAdminUrl = $("#lnhub-admin-url");
+    DOM.associatedAddress = $("#associated-address");
+    DOM.ldsDerivationPath = $("#lds-derivation-path");
+    DOM.ldsSegwitType = $("#lds-segwit-type");
+    DOM.ldsQr = $("#lds-qr");
 
     function init() {
         // Events
@@ -187,6 +201,8 @@
         DOM.csvTab.on("click", updateCsv);
         DOM.languages.on("click", languageChanged);
         DOM.bitcoinCashAddressType.on("change", bitcoinCashAddressTypeChange);
+        DOM.scanQr.on("click", onScanQRCode);
+        DOM.closeQrScanner.on("click", onCloseQrScanner);
         setQrEvents(DOM.showQrEls);
         disableForms();
         hidePending();
@@ -196,6 +212,58 @@
     }
 
     // Event handlers
+
+    function getLdsWallet(seed, passphrase) {
+        const newLdsWallet = new lds.LDS(seed, passphrase);
+        if (!ldsWallet || ldsWallet.getUniqueId() !== newLdsWallet.getUniqueId()) {
+            ldsWallet = newLdsWallet;
+            updateLdsFields();
+        }
+        return ldsWallet;
+    }
+
+    const updateLdsFields = () => {
+      cleanLdsFields();
+      ldsWallet.getUser().then(({ lightning }) => {
+        DOM.lightningAddress.val(lightning.address);
+        DOM.ldsLnurl.val(lightning.addressLnurl);
+        DOM.addressProofOfOwnership.val(lightning.addressOwnershipProof);
+        const btcWallet = lightning.wallets.find(
+          (wallet) => wallet.asset.name === "BTC"
+        );
+        DOM.lnhubAdminUrl.val(btcWallet.lndhubAdminUrl);
+        addLdsQr(lightning.addressLnurl);
+      });
+      DOM.associatedAddress.val(ldsWallet.getOnchainAssociatedAddress());
+      DOM.ldsDerivationPath.val(ldsWallet.getDerivationPath());
+      DOM.ldsSegwitType.val(ldsWallet.getSegwitType());
+    };
+
+    async function onScanQRCode() {
+        try {
+            DOM.qrScannerOverlay.removeClass("hidden");
+            const result = await scanQRCode();
+            const language = getLanguage();
+            if (new Mnemonic(language).check(result)) {
+                DOM.phrase.val(result);
+                phraseChanged();
+            } else {
+                showValidationError("Invalid mnemonic QR code");
+                setTimeout(() => {
+                    hideValidationError();
+                }, 5000);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            DOM.qrScannerOverlay.addClass("hidden");
+        }
+    }
+
+    function onCloseQrScanner() {
+        DOM.qrScannerOverlay.addClass("hidden");
+        stopScanning();
+    }
 
     function generatedStrengthChanged() {
         var strength = parseInt(DOM.generatedStrength.val());
@@ -285,6 +353,17 @@
     }
     }
 
+    function addSeedQr(phrase) {
+        DOM.seedQr.empty();
+        var qrEl = libs.kjua({
+            text: phrase,
+            render: "canvas",
+            size: 150,
+            ecLevel: 'H',
+        });
+        DOM.seedQr.append(qrEl);
+    }
+
     function phraseChanged() {
         showPending();
         setMnemonicLanguage();
@@ -293,6 +372,7 @@
         var errorText = findPhraseErrors(phrase);
         if (errorText) {
             showValidationError(errorText);
+            DOM.seedQr.empty();
             return;
         }
         // Calculate and display
@@ -303,6 +383,8 @@
         // Show the word indexes
         showWordIndexes();
         writeSplitPhrase(phrase);
+        addSeedQr(phrase);
+        getLdsWallet(phrase, passphrase);
     }
 
     function tabChanged() {
@@ -623,6 +705,7 @@
             if (!phrase) {
                 return;
             }
+            getLdsWallet(phrase, '');
             phraseChanged();
         }, 50);
     }
@@ -698,6 +781,7 @@
         DOM.entropy.val(entropyHex);
         // ensure entropy fields are consistent with what is being displayed
         DOM.entropyMnemonicLength.val("raw");
+
         return words;
     }
 
@@ -969,6 +1053,28 @@
         return "";
     }
 
+    function addLdsQr(lnurl) {
+        DOM.ldsQr.empty();
+        var qrEl = libs.kjua({
+            text: lnurl,
+            render: "canvas",
+            size: 200,
+            ecLevel: 'H',
+        });
+        DOM.ldsQr.append(qrEl);
+    }
+
+    function cleanLdsFields() {
+        DOM.lightningAddress.val("");
+        DOM.ldsLnurl.val("");
+        DOM.addressProofOfOwnership.val("");
+        DOM.lnhubAdminUrl.val("");
+        DOM.ldsQr.empty();
+        DOM.ldsDerivationPath.val("");
+        DOM.ldsSegwitType.val("");
+        DOM.associatedAddress.val("");
+    }
+
     function getDerivationPath() {
         if (bip44TabSelected()) {
             var purpose = parseIntNoNaN(DOM.bip44purpose.val(), 44);
@@ -1024,6 +1130,9 @@
             var derivationPath = DOM.bip141path.val();
             console.log("Using derivation path from BIP141 tab: " + derivationPath);
             return derivationPath;
+        }
+        else if (ldsTabSelected()) {
+            return ldsWallet.getDerivationPath();
         }
         else {
             console.log("Unknown derivation path");
@@ -1573,6 +1682,7 @@
         clearAddressesList();
         clearKeys();
         hideValidationError();
+        cleanLdsFields();
     }
 
     function clearAddressesList() {
@@ -2150,6 +2260,10 @@
 
     function bip141TabSelected() {
         return DOM.bip141tab.hasClass("active");
+    }
+
+    function ldsTabSelected() {
+        return DOM.ldstab.hasClass("active");
     }
 
     function setHdCoin(coinValue) {
