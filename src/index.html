@@ -45,19 +45,25 @@
                             <div class="col-sm-10">
                                 <div class="form-inline">
                                     <div class="input-group-inline">
-                                         <span>Generate a random mnemonic</span>:
-                                        <button class="btn generate" ><b>GENERATE</b></button>
-                                        <select id="strength" class="strength form-control">
-                                            <option value="3">3</option>
-                                            <option value="6">6</option>
-                                            <option value="9">9</option>
-                                            <option value="12">12</option>
-                                            <option value="15" selected>15</option>
-                                            <option value="18">18</option>
-                                            <option value="21">21</option>
-                                            <option value="24">24</option>
-                                        </select>
-                                        <span>words, or enter your own below</span>.
+                                        <p>
+                                            To begin you can:
+                                        </p>
+                                        <ul>
+                                            <li style="margin-bottom: 8px;">Generate a random mnemonic <button class="btn generate"><b>GENERATE</b></button> <select id="strength"
+                                                    class="strength form-control">
+                                                    <option value="3">3</option>
+                                                    <option value="6">6</option>
+                                                    <option value="9">9</option>
+                                                    <option value="12" selected>12</option>
+                                                    <option value="15">15</option>
+                                                    <option value="18">18</option>
+                                                    <option value="21">21</option>
+                                                    <option value="24">24</option>
+                                                </select>
+                                            </li>
+                                            <li style="margin-bottom: 8px;">Scan a QR code <button id="scan-qr" class="btn scan-qr"><b>SCAN QR</b></button></li>
+                                            <li>or enter your own mnemonic below</li>
+                                        </ul>
                                         <p class="warning help-block hidden">
                                             <span class="text-danger">
                                                 Mnemonics with less than 12 words have low entropy and may be guessed by an attacker.
@@ -238,7 +244,14 @@
                         <div class="form-group">
                             <label for="phrase" class="col-sm-2 control-label">BIP39 Mnemonic</label>
                             <div class="col-sm-10">
-                                <textarea id="phrase" class="phrase private-data form-control" data-show-qr autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+                                <div class="row">
+                                    <div class="col-sm-8 col-xs-12">
+                                        <textarea id="phrase" class="phrase private-data form-control" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+                                    </div>
+                                    <div class="col-sm-4 col-xs-12">
+                                        <div id="seed-qr" class="text-center seed-qr-xs-margin"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="form-group">
@@ -426,6 +439,9 @@
                         </li>
                         <li id="bip141-tab">
                             <a href="#bip141" role="tab" data-toggle="tab">BIP141</a>
+                        </li>
+                        <li id="lds-tab">
+                            <a href="#lds" role="tab" data-toggle="tab">LDS</a>
                         </li>
                     </ul>
                     <div class="derivation-type tab-content">
@@ -793,21 +809,84 @@
                                 </div>
                             </form>
                         </div>
+                        <div id="lds" class="tab-pane">
+                            <div class="lds-container row">
+                                <form class="form-horizontal col-sm-8 col-xs-12" role="form">
+                                    <br>
+                                    <div class="available">
+                                        <div class="col-sm-2"></div>
+                                        <div class="col-sm-10">
+                                            <p>
+                                                For more info see the
+                                                <a href="https://github.com/LightningDotSpace/api" target="_blank">LightningDotSpace API</a>.
+                                            </p>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="lds-lnurl" class="col-sm-2 control-label">
+                                                LNURL
+                                            </label>
+                                            <div class="col-sm-10">
+                                                <textarea id="lds-lnurl" type="text" class="lds-lnurl form-control" value="" readonly></textarea>
+                                            </div> 
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="lightning-address" class="col-sm-2 control-label">
+                                                Lightning Address
+                                            </label>
+                                            <div class="col-sm-10">
+                                                <input id="lightning-address" type="text" class="lightning-address form-control" value="" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="address-proof-of-ownership" class="col-sm-2 control-label">
+                                                Address Proof of Ownership
+                                            </label>
+                                            <div class="col-sm-10">
+                                                <textarea id="address-proof-of-ownership" type="text" class="address-proof-of-ownership form-control" value="" readonly></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="lnhub-admin-url" class="col-sm-2 control-label">
+                                                LNHub Admin URL
+                                            </label>
+                                            <div class="col-sm-10">
+                                                <textarea id="lnhub-admin-url" type="text" class="lnhub-admin-url form-control" value="" readonly></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="associated-address" class="col-sm-2 control-label">
+                                                Associated Address
+                                            </label>
+                                            <div class="col-sm-10">
+                                                <input id="associated-address" type="text" class="associated-address form-control" value="" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="lds-derivation-path" class="col-sm-2 control-label">
+                                                Derivation Path
+                                            </label>
+                                            <div class="col-sm-10">
+                                                <input id="lds-derivation-path" type="text" class="lds-derivation-path form-control" value="" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="lds-segwit-type" class="col-sm-2 control-label">
+                                                SegWit Type
+                                            </label>
+                                            <div class="col-sm-10">
+                                                <input id="lds-segwit-type" type="text" class="lds-segwit-type form-control" value="" readonly>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                                <div class="col-sm-4 col-xs-12">
+                                    <br><br>
+                                    <div id="lds-qr" class="d-flex justify-content-center align-items-center"></div>
+                                    <p class="text-center">Scan the QR code with your lightning wallet to transfer funds.</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <form class="form-horizontal" role="form">
-                        <div class="form-group">
-                            <label for="extended-priv-key" class="col-sm-2 control-label">BIP32 Extended Private Key</label>
-                            <div class="col-sm-10">
-                                <textarea id="extended-priv-key" class="extended-priv-key private-data form-control" readonly="readonly" data-show-qr autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="extended-pub-key" class="col-sm-2 control-label">BIP32 Extended Public Key</label>
-                            <div class="col-sm-10">
-                                <textarea id="extended-pub-key" class="extended-pub-key form-control" readonly="readonly" data-show-qr autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
-                            </div>
-                        </div>
-                    </form>
                 </div>
             </div>
 
@@ -1128,6 +1207,13 @@
             <div class="feedback">Loading...</div>
         </div>
 
+        <div id="qr-scanner-overlay" class="qr-scanner-overlay hidden">
+            <div class="qr-scanner-container">
+                <video id="video" width="100%" height="100%"></video>
+                <button id="close-qr-scanner" class="btn btn-primary">Close</button>
+            </div>
+        </div>
+
         <script type="text/template" id="address-row-template">
             <tr>
                 <td class="index"><span></span></td>
@@ -1161,6 +1247,9 @@
         <script src="js/wordlist_portuguese.js"></script>
         <script src="js/jsbip39.js"></script>
         <script src="js/entropy.js"></script>
+        <script src="js/zxing.js"></script>
+        <script src="js/qr-scanner.js"></script>
+        <script src="js/lds.js"></script>
         <script src="js/index.js"></script>
     </body>
 </html>
