@@ -241,6 +241,22 @@ var Mnemonic = function(language) {
         return source;
     }
 
+    self.zfill = zfill;
+
+    self.mnemonicToWordIndexes = function(mnemonic) {
+        var mnemonic = self.splitWords(mnemonic);
+        if (mnemonic.length == 0 || mnemonic.length % 3 > 0) {
+            return null;
+        }
+        var wordIndexes = [];
+        for (var i=0; i<mnemonic.length; i++) {
+            var word = mnemonic[i];
+            var wordIndex = wordlist.indexOf(word);
+            wordIndexes.push(wordIndex);
+        }
+        return wordIndexes;
+    }
+
     init();
 
 }
