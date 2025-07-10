@@ -145,6 +145,7 @@
     DOM.qrScannerOverlay = $("#qr-scanner-overlay");
     DOM.closeQrScanner = $("#close-qr-scanner");
     DOM.seedQr = $("#seed-qr");
+    DOM.standardSeedQr = $("#standard-seed-qr");
     DOM.ldsLnurl = $("#lds-lnurl");
     DOM.lightningAddress = $("#lightning-address");
     DOM.addressProofOfOwnership = $("#address-proof-of-ownership");
@@ -355,13 +356,25 @@
 
     function addSeedQr(phrase) {
         DOM.seedQr.empty();
-        var qrEl = libs.kjua({
+        DOM.standardSeedQr.empty();
+
+        const qrEl = libs.kjua({
             text: phrase,
             render: "canvas",
             size: 150,
-            ecLevel: 'H',
+            ecLevel: 'M',
         });
         DOM.seedQr.append(qrEl);
+        
+        const wordIndexes = mnemonic.mnemonicToWordIndexes(phrase);
+        const wordIndexesString = wordIndexes.map(n => mnemonic.zfill(n, 4)).join("");
+        const qrStandardEl = libs.kjua({
+            text: wordIndexesString,
+            render: "canvas",
+            size: 150,
+            ecLevel: 'L',
+        });
+        DOM.standardSeedQr.append(qrStandardEl);
     }
 
     function phraseChanged() {
