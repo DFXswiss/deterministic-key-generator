@@ -239,40 +239,55 @@
             }
         }
         
+        // Set network if provided (without triggering change yet)
+        var networkIndex = -1;
+        if ('network' in params || 'coin' in params) {
+            var networkName = (params['network'] || params['coin']).toLowerCase();
+            console.log('Looking for network:', networkName);
+            
+            // Find the network index
+            DOM.network.find('option').each(function(index) {
+                var optionText = $(this).text().toLowerCase();
+                // Check for exact match or partial match
+                if (optionText.indexOf(networkName) !== -1) {
+                    networkIndex = index;
+                    console.log('Found network at index:', networkIndex, 'Text:', $(this).text());
+                    return false; // break the loop
+                }
+            });
+            
+            // If network found, select it
+            if (networkIndex >= 0) {
+                DOM.network.val(networkIndex);
+                console.log('Network selected:', networkIndex);
+            }
+        }
+        
         // Auto-generate if parameter is present
         if ('generate' in params || 'auto-generate' in params || 'autogenerate' in params) {
             // Delay to ensure DOM is fully loaded
             setTimeout(function() {
                 console.log('Auto-generating mnemonic...');
                 
-                // First generate the mnemonic
+                // If network was set, apply it first (without triggering change)
+                if (networkIndex >= 0) {
+                    // Get the network and apply it directly
+                    var network = networks[networkIndex];
+                    network.onSelect();
+                    adjustNetworkForSegwit();
+                }
+                
+                // Then generate the mnemonic
                 DOM.generate.trigger("click");
                 
-                // Then set network if provided, after mnemonic is generated
-                if ('network' in params || 'coin' in params) {
-                    var networkName = params['network'] || params['coin'];
-                    // Wait for generation to complete
-                    setTimeout(function() {
-                        DOM.network.find('option').each(function() {
-                            if ($(this).text().toLowerCase().indexOf(networkName.toLowerCase()) !== -1) {
-                                DOM.network.val($(this).val()).trigger('change');
-                                return false; // break the loop
-                            }
-                        });
-                    }, 200);
-                }
             }, 500);
-        } else if ('network' in params || 'coin' in params) {
+        } else if (networkIndex >= 0) {
             // If only network is set without generate
-            var networkName = params['network'] || params['coin'];
+            // Just trigger the network change after a small delay
             setTimeout(function() {
-                DOM.network.find('option').each(function() {
-                    if ($(this).text().toLowerCase().indexOf(networkName.toLowerCase()) !== -1) {
-                        DOM.network.val($(this).val()).trigger('change');
-                        return false; // break the loop
-                    }
-                });
-            }, 100);
+                console.log('Changing network only...');
+                DOM.network.trigger('change');
+            }, 500);
         }
     }
 
