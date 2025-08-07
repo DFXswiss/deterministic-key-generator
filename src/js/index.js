@@ -230,16 +230,7 @@
             }
         }
         
-        // Auto-generate if parameter is present
-        if ('generate' in params || 'auto-generate' in params || 'autogenerate' in params) {
-            // Small delay to ensure DOM is fully loaded
-            setTimeout(function() {
-                console.log('Auto-generating mnemonic...');
-                DOM.generate.trigger("click");
-            }, 500);
-        }
-        
-        // Optional: Set strength from URL parameter
+        // First set strength if provided
         if ('strength' in params) {
             var strength = params['strength'];
             var validStrengths = ['3', '6', '9', '12', '15', '18', '21', '24'];
@@ -248,15 +239,39 @@
             }
         }
         
-        // Optional: Set network from URL parameter
+        // Then set network if provided (before generating)
         if ('network' in params || 'coin' in params) {
             var networkName = params['network'] || params['coin'];
             DOM.network.find('option').each(function() {
                 if ($(this).text().toLowerCase().indexOf(networkName.toLowerCase()) !== -1) {
-                    DOM.network.val($(this).val()).trigger('change');
+                    DOM.network.val($(this).val());
+                    // Don't trigger change event yet, let it happen naturally
                     return false; // break the loop
                 }
             });
+        }
+        
+        // Finally auto-generate if parameter is present
+        if ('generate' in params || 'auto-generate' in params || 'autogenerate' in params) {
+            // Delay to ensure DOM is fully loaded and settings are applied
+            setTimeout(function() {
+                console.log('Auto-generating mnemonic...');
+                // If network was set, trigger its change event first
+                if ('network' in params || 'coin' in params) {
+                    DOM.network.trigger('change');
+                    // Small additional delay for network change to process
+                    setTimeout(function() {
+                        DOM.generate.trigger("click");
+                    }, 100);
+                } else {
+                    DOM.generate.trigger("click");
+                }
+            }, 500);
+        } else if ('network' in params || 'coin' in params) {
+            // If only network is set without generate, still trigger the change
+            setTimeout(function() {
+                DOM.network.trigger('change');
+            }, 100);
         }
     }
 
