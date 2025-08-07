@@ -23,3 +23,8 @@ jobs:
           password: ${{ secrets.PRD_PASSWORD }}
           local-dir: ./src/
           server-dir: ./
+          protocol: ftps
+          port: 21
+          timeout: 120000
+          log-level: verbose
+          dry-run: false
