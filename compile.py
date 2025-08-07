@@ -1,6 +1,7 @@
 import os
 import re
 import datetime
+import json
 from io import open
 
 # This script generates the bip39-standalone.html file.
@@ -10,6 +11,17 @@ from io import open
 f = open('src/index.html', "r", encoding="utf-8")
 page = f.read()
 f.close()
+
+# Read version from version.json
+try:
+    with open('version.json', 'r') as vf:
+        version_data = json.load(vf)
+        version = version_data.get('version', 1)
+except:
+    version = 1
+
+# Replace version in HTML
+page = re.sub(r'<p class="version">v[\d\.]+</p>', f'<p class="version">v{version}</p>', page)
 
 
 # Script tags
