@@ -368,7 +368,12 @@
             seedChanged()
         }
         else {
-            rootKeyChanged();
+            // Only call rootKeyChanged if we have a root key
+            var rootKeyBase58 = DOM.rootKey.val();
+            if (rootKeyBase58.length > 0) {
+                rootKeyChanged();
+            }
+            // Otherwise do nothing - no seed and no root key means nothing to update
         }
     }
 
