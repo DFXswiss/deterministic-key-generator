@@ -210,6 +210,42 @@
         hideValidationError();
         populateNetworkSelect();
         populateClientSelect();
+        
+        // Check URL parameters for auto-generate
+        checkUrlParams();
+    }
+    
+    // Check URL parameters and trigger actions
+    function checkUrlParams() {
+        var urlParams = new URLSearchParams(window.location.search);
+        
+        // Auto-generate if parameter is present
+        if (urlParams.has('generate') || urlParams.has('auto-generate') || urlParams.has('autogenerate')) {
+            // Small delay to ensure DOM is fully loaded
+            setTimeout(function() {
+                DOM.generate.trigger("click");
+            }, 100);
+        }
+        
+        // Optional: Set strength from URL parameter
+        if (urlParams.has('strength')) {
+            var strength = urlParams.get('strength');
+            var validStrengths = ['3', '6', '9', '12', '15', '18', '21', '24'];
+            if (validStrengths.indexOf(strength) !== -1) {
+                DOM.generatedStrength.val(strength);
+            }
+        }
+        
+        // Optional: Set network from URL parameter
+        if (urlParams.has('network') || urlParams.has('coin')) {
+            var networkName = urlParams.get('network') || urlParams.get('coin');
+            DOM.network.find('option').each(function() {
+                if ($(this).text().toLowerCase().indexOf(networkName.toLowerCase()) !== -1) {
+                    DOM.network.val($(this).val()).trigger('change');
+                    return false; // break the loop
+                }
+            });
+        }
     }
 
     // Event handlers
