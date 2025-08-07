@@ -217,19 +217,31 @@
     
     // Check URL parameters and trigger actions
     function checkUrlParams() {
-        var urlParams = new URLSearchParams(window.location.search);
+        // More compatible URL parameter parsing
+        var params = {};
+        var queryString = window.location.search.substring(1);
+        if (queryString) {
+            var pairs = queryString.split('&');
+            for (var i = 0; i < pairs.length; i++) {
+                var pair = pairs[i].split('=');
+                var key = decodeURIComponent(pair[0]);
+                var value = pair.length > 1 ? decodeURIComponent(pair[1]) : 'true';
+                params[key] = value;
+            }
+        }
         
         // Auto-generate if parameter is present
-        if (urlParams.has('generate') || urlParams.has('auto-generate') || urlParams.has('autogenerate')) {
+        if ('generate' in params || 'auto-generate' in params || 'autogenerate' in params) {
             // Small delay to ensure DOM is fully loaded
             setTimeout(function() {
+                console.log('Auto-generating mnemonic...');
                 DOM.generate.trigger("click");
-            }, 100);
+            }, 500);
         }
         
         // Optional: Set strength from URL parameter
-        if (urlParams.has('strength')) {
-            var strength = urlParams.get('strength');
+        if ('strength' in params) {
+            var strength = params['strength'];
             var validStrengths = ['3', '6', '9', '12', '15', '18', '21', '24'];
             if (validStrengths.indexOf(strength) !== -1) {
                 DOM.generatedStrength.val(strength);
@@ -237,8 +249,8 @@
         }
         
         // Optional: Set network from URL parameter
-        if (urlParams.has('network') || urlParams.has('coin')) {
-            var networkName = urlParams.get('network') || urlParams.get('coin');
+        if ('network' in params || 'coin' in params) {
+            var networkName = params['network'] || params['coin'];
             DOM.network.find('option').each(function() {
                 if ($(this).text().toLowerCase().indexOf(networkName.toLowerCase()) !== -1) {
                     DOM.network.val($(this).val()).trigger('change');
