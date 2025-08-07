@@ -100,15 +100,13 @@
             publicKeyBytes.push(parseInt(publicKeyHex.substr(i, 2), 16));
         }
         
-        // Version byte for P2TR (Taproot) is 1
-        var version = 1;
+        // Spark uses a special format:
+        // Version byte 0x0a (10) + Length prefix 0x21 (33) + 33-byte public key
+        var version = 0x0a; // Spark version byte
+        var lengthPrefix = 0x21; // Length of public key (33 bytes)
         
-        // For Spark, we use the full 33-byte compressed public key
-        // This is different from standard P2TR which uses only x-coordinate
-        var keyData = publicKeyBytes;
-        
-        // Combine version and data (1 + 33 = 34 bytes total)
-        var combined = [version].concat(keyData);
+        // Combine: version + length + public key
+        var combined = [version, lengthPrefix].concat(publicKeyBytes);
         
         // Convert to 5-bit groups for bech32m
         var words = convertBits(combined, 8, 5, true);
