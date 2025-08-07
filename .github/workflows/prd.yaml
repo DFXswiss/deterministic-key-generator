@@ -1,0 +1,30 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Production Server
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+      
+      - name: Deploy to All-Inkl Production Server
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.PRD_HOST }}
+          username: ${{ secrets.PRD_USER }}
+          password: ${{ secrets.PRD_PASSWORD }}
+          local-dir: ./src/
+          server-dir: ./
+          protocol: ftps
+          port: 21
+          timeout: 120000
+          log-level: verbose
+          dry-run: false

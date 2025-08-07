@@ -2,3 +2,6 @@ node_modules
 bip39-standalone.html
 libs/lds/dist
 .DS_Store
+
+# FTP deployment state
+.ftp-deploy-sync-state.json
