@@ -1413,6 +1413,14 @@
                         privkey = libs.ethUtil.bufferToHex(keyPair.d.toBuffer(32));
                     }
                 }
+                // Spark Money is different (uses Bech32m encoding)
+                if (networks[DOM.network.val()].name == "SPARK - Spark Money") {
+                    var sparkNetwork = 'mainnet'; // Default to mainnet
+                    if (network.wif === 0xef) { // Testnet WIF prefix
+                        sparkNetwork = 'testnet';
+                    }
+                    address = sparkUtil.publicKeyToSparkAddress(pubkey, sparkNetwork);
+                }
                 //TRX is different
                 if (networks[DOM.network.val()].name == "TRX - Tron") {
                     keyPair = new libs.bitcoin.ECPair(keyPair.d, null, { network: network, compressed: false });
@@ -3588,6 +3596,13 @@
             onSelect: function() {
                 network = libs.bitcoin.networks.smileycoin;
                 setHdCoin(59);
+            },
+        },
+        {
+            name: "SPARK - Spark Money",
+            onSelect: function() {
+                network = libs.bitcoin.networks.bitcoin; // Uses Bitcoin's key derivation
+                setHdCoin(0); // Uses Bitcoin's BIP44 coin type since it's a Bitcoin Layer 2
             },
         },
         {
