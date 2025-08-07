@@ -91,6 +91,9 @@
         
         var prefix = prefixes[network] || 'sp';
         
+        // Debug logging
+        console.log('Generating Spark address for public key:', publicKeyHex);
+        
         // Convert hex public key to bytes
         var publicKeyBytes = [];
         for (var i = 0; i < publicKeyHex.length; i += 2) {
@@ -100,14 +103,11 @@
         // Version byte for P2TR (Taproot) is 1
         var version = 1;
         
-        // For P2TR, we use the x-coordinate of the public key (32 bytes)
-        // If the public key is compressed (33 bytes), skip the first byte
+        // For Spark, we use the full 33-byte compressed public key
+        // This is different from standard P2TR which uses only x-coordinate
         var keyData = publicKeyBytes;
-        if (keyData.length === 33) {
-            keyData = keyData.slice(1); // Remove the compression prefix
-        }
         
-        // Combine version and data
+        // Combine version and data (1 + 33 = 34 bytes total)
         var combined = [version].concat(keyData);
         
         // Convert to 5-bit groups for bech32m
@@ -118,7 +118,10 @@
         }
         
         // Encode with bech32m
-        return encode(prefix, words);
+        var address = encode(prefix, words);
+        console.log('Generated Spark address:', address);
+        
+        return address;
     }
     
     // Export for use in index.js

@@ -3687,6 +3687,7 @@
             onSelect: function() {
                 network = libs.bitcoin.networks.bitcoin; // Uses Bitcoin's key derivation
                 setHdCoin(0); // Uses Bitcoin's BIP44 coin type since it's a Bitcoin Layer 2
+                // Note: Spark uses m/44'/0'/0'/0/0 for the identity key
             },
         },
         {
