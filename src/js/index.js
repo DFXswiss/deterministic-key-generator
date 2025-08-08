@@ -210,6 +210,85 @@
         hideValidationError();
         populateNetworkSelect();
         populateClientSelect();
+        
+        // Check URL parameters for auto-generate
+        checkUrlParams();
+    }
+    
+    // Check URL parameters and trigger actions
+    function checkUrlParams() {
+        // More compatible URL parameter parsing
+        var params = {};
+        var queryString = window.location.search.substring(1);
+        if (queryString) {
+            var pairs = queryString.split('&');
+            for (var i = 0; i < pairs.length; i++) {
+                var pair = pairs[i].split('=');
+                var key = decodeURIComponent(pair[0]);
+                var value = pair.length > 1 ? decodeURIComponent(pair[1]) : 'true';
+                params[key] = value;
+            }
+        }
+        
+        // First set strength if provided
+        if ('strength' in params) {
+            var strength = params['strength'];
+            var validStrengths = ['3', '6', '9', '12', '15', '18', '21', '24'];
+            if (validStrengths.indexOf(strength) !== -1) {
+                DOM.generatedStrength.val(strength);
+            }
+        }
+        
+        // Set network if provided (without triggering change yet)
+        var networkIndex = -1;
+        if ('network' in params || 'coin' in params) {
+            var networkName = (params['network'] || params['coin']).toLowerCase();
+            console.log('Looking for network:', networkName);
+            
+            // Find the network index
+            DOM.network.find('option').each(function(index) {
+                var optionText = $(this).text().toLowerCase();
+                // Check for exact match or partial match
+                if (optionText.indexOf(networkName) !== -1) {
+                    networkIndex = index;
+                    console.log('Found network at index:', networkIndex, 'Text:', $(this).text());
+                    return false; // break the loop
+                }
+            });
+            
+            // If network found, select it
+            if (networkIndex >= 0) {
+                DOM.network.val(networkIndex);
+                console.log('Network selected:', networkIndex);
+            }
+        }
+        
+        // Auto-generate if parameter is present
+        if ('generate' in params || 'auto-generate' in params || 'autogenerate' in params) {
+            // Delay to ensure DOM is fully loaded
+            setTimeout(function() {
+                console.log('Auto-generating mnemonic...');
+                
+                // If network was set, apply it first (without triggering change)
+                if (networkIndex >= 0) {
+                    // Get the network and apply it directly
+                    var network = networks[networkIndex];
+                    network.onSelect();
+                    adjustNetworkForSegwit();
+                }
+                
+                // Then generate the mnemonic
+                DOM.generate.trigger("click");
+                
+            }, 500);
+        } else if (networkIndex >= 0) {
+            // If only network is set without generate
+            // Just trigger the network change after a small delay
+            setTimeout(function() {
+                console.log('Changing network only...');
+                DOM.network.trigger('change');
+            }, 500);
+        }
     }
 
     // Event handlers
@@ -289,7 +368,12 @@
             seedChanged()
         }
         else {
-            rootKeyChanged();
+            // Only call rootKeyChanged if we have a root key
+            var rootKeyBase58 = DOM.rootKey.val();
+            if (rootKeyBase58.length > 0) {
+                rootKeyChanged();
+            }
+            // Otherwise do nothing - no seed and no root key means nothing to update
         }
     }
 
@@ -1412,6 +1496,14 @@
                     if (hasPrivkey) {
                         privkey = libs.ethUtil.bufferToHex(keyPair.d.toBuffer(32));
                     }
+                }
+                // Spark Money is different (uses Bech32m encoding)
+                if (networks[DOM.network.val()].name == "SPARK - Spark Money") {
+                    var sparkNetwork = 'mainnet'; // Default to mainnet
+                    if (network.wif === 0xef) { // Testnet WIF prefix
+                        sparkNetwork = 'testnet';
+                    }
+                    address = sparkUtil.publicKeyToSparkAddress(pubkey, sparkNetwork);
                 }
                 //TRX is different
                 if (networks[DOM.network.val()].name == "TRX - Tron") {
@@ -3588,6 +3680,22 @@
             onSelect: function() {
                 network = libs.bitcoin.networks.smileycoin;
                 setHdCoin(59);
+            },
+        },
+        {
+            name: "SPARK - Spark Money", 
+            onSelect: function() {
+                network = libs.bitcoin.networks.bitcoin; // Uses Bitcoin's key derivation
+                // Spark uses custom purpose 8797555'
+                // Identity key path: m/8797555'/accountNumber'/0'
+                // SDK defaults to account 1 for backwards compatibility
+                setHdCoin(0);
+                
+                // We need to use BIP32 tab with custom path
+                DOM.bip32tab.trigger("click");
+                DOM.bip32path.val("m/8797555'/1'/0'");  // Try account 1 (SDK default)
+                DOM.hardenedAddresses.prop('checked', false);  // IMPORTANT: Don't harden the final derivation
+                DOM.bip32path.trigger("input");
             },
         },
         {

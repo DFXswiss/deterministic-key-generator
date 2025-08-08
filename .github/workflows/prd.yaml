@@ -15,13 +15,34 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
       
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      
+      - name: Increment Version
+        run: |
+          python increment-version.py
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add version.json
+          git commit -m "Increment version [skip ci]" || echo "No version changes to commit"
+          git push origin master || echo "No changes to push"
+      
+      - name: Compile Standalone HTML
+        run: |
+          python compile.py
+          mv bip39-standalone.html index.html
+          mkdir -p dist
+          mv index.html dist/
+      
       - name: Deploy to All-Inkl Production Server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.PRD_HOST }}
           username: ${{ secrets.PRD_USER }}
           password: ${{ secrets.PRD_PASSWORD }}
-          local-dir: ./src/
+          local-dir: ./dist/
           server-dir: ./
           protocol: ftps
           port: 21
