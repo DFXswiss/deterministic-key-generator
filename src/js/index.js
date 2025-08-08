@@ -3694,7 +3694,7 @@
                 // We need to use BIP32 tab with custom path
                 DOM.bip32tab.trigger("click");
                 DOM.bip32path.val("m/8797555'/1'/0'");  // Try account 1 (SDK default)
-                DOM.hardenedAddresses.prop('checked', true);
+                DOM.hardenedAddresses.prop('checked', false);  // IMPORTANT: Don't harden the final derivation
                 DOM.bip32path.trigger("input");
             },
         },
