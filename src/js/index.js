@@ -3683,11 +3683,19 @@
             },
         },
         {
-            name: "SPARK - Spark Money",
+            name: "SPARK - Spark Money", 
             onSelect: function() {
                 network = libs.bitcoin.networks.bitcoin; // Uses Bitcoin's key derivation
-                setHdCoin(0); // Uses Bitcoin's BIP44 coin type since it's a Bitcoin Layer 2
-                // Note: Spark uses m/44'/0'/0'/0/0 for the identity key
+                // Spark uses custom purpose 8797555'
+                // Identity key path: m/8797555'/accountNumber'/0'
+                // SDK defaults to account 1 for backwards compatibility
+                setHdCoin(0);
+                
+                // We need to use BIP32 tab with custom path
+                DOM.bip32tab.trigger("click");
+                DOM.bip32path.val("m/8797555'/1'/0'");  // Try account 1 (SDK default)
+                DOM.hardenedAddresses.prop('checked', true);
+                DOM.bip32path.trigger("input");
             },
         },
         {
