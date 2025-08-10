@@ -15,7 +15,9 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
       
-      - name: Deploy to All-Inkl Production Server
+      - name: Deploy to All-Inkl Production Server (Attempt 1)
+        id: deploy1
+        continue-on-error: true
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.PRD_HOST }}
@@ -25,6 +27,27 @@ jobs:
           server-dir: ./
           protocol: ftps
           port: 21
-          timeout: 120000
+          timeout: 300000
           log-level: verbose
           dry-run: false
+          dangerous-clean-slate: false
+      
+      - name: Wait before retry
+        if: steps.deploy1.outcome == 'failure'
+        run: sleep 10
+      
+      - name: Deploy to All-Inkl Production Server (Retry)
+        if: steps.deploy1.outcome == 'failure'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.PRD_HOST }}
+          username: ${{ secrets.PRD_USER }}
+          password: ${{ secrets.PRD_PASSWORD }}
+          local-dir: ./src/
+          server-dir: ./
+          protocol: ftps
+          port: 21
+          timeout: 300000
+          log-level: verbose
+          dry-run: false
+          dangerous-clean-slate: false
