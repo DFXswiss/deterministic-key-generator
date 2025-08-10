@@ -15,11 +15,32 @@
         <div class="container">
 
             <h1 class="text-center">Deterministic Key Generator</h1>
+            <p class="text-center">
+                <span class="text-danger">
+                    <strong>Do not use this site for wallets with real money. This website is intended solely for developers to better understand how it works!</strong>
+                </span>
+            </p>
             <p class="version">v0.5.6</p>
-            <hr>
+            
             <div class="row">
                 <div class="col-md-12">
-                    <h2>Mnemonic</h2>
+                    <h2>Start with</h2>
+                    <ul class="nav nav-tabs" role="tablist" id="start-with-tabs">
+                        <li class="active">
+                            <a href="#start-mnemonic" role="tab" data-toggle="tab">Mnemonic</a>
+                        </li>
+                        <li>
+                            <a href="#start-private-key" role="tab" data-toggle="tab">Private Key</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="tab-content">
+                <div id="start-mnemonic" class="tab-pane active">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h2>Mnemonic</h2>
                     <form class="form-horizontal" role="form">
                         <div class="form-group">
                             <div class="col-sm-2"></div>
@@ -28,12 +49,6 @@
                                 <p>
                                     For more info see the
                                     <a href="https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki" target="_blank">BIP39 spec</a>.
-                                </p>
-
-                                <p>
-                                    <span class="text-danger">
-                                        <strong>Do not use this site for wallets with real money. This website is intended solely for developers to better understand how it works!</strong>
-                                    </span>
                                 </p>
                             </div>
                         </div>
@@ -422,12 +437,91 @@
                             </div>
                         </div>
                     </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="start-private-key" class="tab-pane">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h2>Private Key</h2>
+                            <form class="form-horizontal" role="form">
+                                <div class="form-group">
+                                    <label for="private-key-input" class="col-sm-2 control-label">Private Key</label>
+                                    <div class="col-sm-10">
+                                        <textarea id="private-key-input" class="private-key-field private-data form-control" placeholder="Enter private key (WIF or Hex format)" data-show-qr autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+                                        <span class="help-block">Supported formats: WIF, Hexadecimal (64 chars, with or without 0x prefix)</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="network-private-key" class="col-sm-2 control-label">Coin</label>
+                                    <div class="col-sm-10">
+                                        <select id="network-private-key" class="network-private form-control">
+                                            <!-- populated by javascript -->
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <!-- Additional parameters for specific coins -->
+                                <div id="private-key-additional-params" class="hidden">
+                                    <div class="form-group segwit-options hidden">
+                                        <label class="col-sm-2 control-label">Address Type</label>
+                                        <div class="col-sm-10">
+                                            <select id="private-key-address-type" class="form-control">
+                                                <option value="p2pkh">Legacy (P2PKH)</option>
+                                                <option value="p2sh-p2wpkh">Nested SegWit (P2SH-P2WPKH)</option>
+                                                <option value="p2wpkh">Native SegWit (P2WPKH/Bech32)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group compressed-key-option hidden">
+                                        <label class="col-sm-2 control-label">Key Type</label>
+                                        <div class="col-sm-10">
+                                            <div class="checkbox">
+                                                <label>
+                                                    <input type="checkbox" id="private-key-compressed" checked>
+                                                    Use compressed public key
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <hr>
+                                
+                                <!-- Results section -->
+                                <div id="private-key-results" class="hidden">
+                                    <div class="form-group">
+                                        <label class="col-sm-2 control-label">Public Key</label>
+                                        <div class="col-sm-10">
+                                            <textarea id="private-key-public" class="form-control" readonly data-show-qr autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-sm-2 control-label">Address</label>
+                                        <div class="col-sm-10">
+                                            <textarea id="private-key-address" class="form-control" readonly data-show-qr autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-sm-2 control-label">Private Key (WIF)</label>
+                                        <div class="col-sm-10">
+                                            <textarea id="private-key-wif" class="form-control private-data" readonly data-show-qr autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Error display -->
+                                <div id="private-key-error" class="alert alert-danger hidden"></div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <hr>
 
-            <div class="row">
+            <div class="row" id="derivation-path-section">
                 <div class="col-md-12">
                     <h2>Derivation Path</h2>
                     <ul class="derivation-type nav nav-tabs" role="tablist">
@@ -898,7 +992,7 @@
 
             <hr>
 
-            <div class="row">
+            <div class="row" id="derived-addresses-section">
                 <div class="col-md-12">
                     <h2>Derived Addresses</h2>
                     <p>Note these addresses are derived from the BIP32 Extended Key</p>
@@ -996,12 +1090,14 @@
                     </div>
                 </div>
             </div>
-            <span>Show</span>
-            <input type="number" class="rows-to-add" value="20">
-            <button class="more">more rows</button>
-            <span>starting from index</span>
-            <input type="number" class="more-rows-start-index">
-            <span>(leave blank to generate from next index)</span>
+            <div id="more-rows-section">
+                <span>Show</span>
+                <input type="number" class="rows-to-add" value="20">
+                <button class="more">more rows</button>
+                <span>starting from index</span>
+                <input type="number" class="more-rows-start-index">
+                <span>(leave blank to generate from next index)</span>
+            </div>
 
             <hr>
 
@@ -1230,5 +1326,262 @@
         <script src="js/qr-scanner.js"></script>
         <script src="js/lds.js"></script>
         <script src="js/index.js"></script>
+        <script>
+            // Handle Start with tab switching
+            $(document).ready(function() {
+                // Function to copy network options
+                function copyNetworkOptions() {
+                    if ($('#network-phrase option').length > 0 && $('#network-private-key option').length === 0) {
+                        // Removed console.log for security
+                        $('#network-phrase option').each(function() {
+                            var newOption = new Option($(this).text(), $(this).val());
+                            if ($(this).text() === "BTC - Bitcoin") {
+                                newOption.selected = true;
+                            }
+                            $('#network-private-key').append(newOption);
+                        });
+                        return true;
+                    }
+                    return false;
+                }
+                
+                // Try to copy options when DOM is ready
+                if (!copyNetworkOptions()) {
+                    // If initial copy fails, try again after a short delay
+                    setTimeout(copyNetworkOptions, 100);
+                }
+                
+                // Private Key conversion functionality
+                function processPrivateKey() {
+                    var privKeyInput = $('#private-key-input').val().trim();
+                    var networkIndex = $('#network-private-key').val();
+                    
+                    // Clear previous results and errors
+                    $('#private-key-error').addClass('hidden').text('');
+                    $('#private-key-results').addClass('hidden');
+                    $('#private-key-public').val('');
+                    $('#private-key-address').val('');
+                    $('#private-key-wif').val('');
+                    
+                    if (!privKeyInput) {
+                        return;
+                    }
+                    
+                    if (!networkIndex) {
+                        $('#private-key-error').removeClass('hidden').text('Please select a coin');
+                        return;
+                    }
+                    
+                    try {
+                        // Check if required global variables are available
+                        if (typeof networks === 'undefined' || typeof libs === 'undefined') {
+                            throw new Error('Required libraries not loaded. Please refresh the page.');
+                        }
+                        
+                        // Get the network configuration
+                        var networkConfig = networks[parseInt(networkIndex)];
+                        
+                        // Call onSelect to set up the network properly
+                        if (networkConfig && networkConfig.onSelect) {
+                            networkConfig.onSelect();
+                        }
+                        
+                        // Now use the global network variable that was set by onSelect
+                        // Note: network is a global variable set by onSelect
+                        var bitcoinNetwork = (typeof network !== 'undefined' ? network : libs.bitcoin.networks.bitcoin);
+                        
+                        // Show/hide additional options based on network
+                        $('#private-key-additional-params').removeClass('hidden');
+                        
+                        var networkName = networkConfig.name;
+                        
+                        // Show segwit options for Bitcoin
+                        if (networkName === "BTC - Bitcoin" || networkName === "LTC - Litecoin") {
+                            $('.segwit-options').removeClass('hidden');
+                        } else {
+                            $('.segwit-options').addClass('hidden');
+                        }
+                        
+                        // Show compressed key option for Bitcoin-like coins
+                        if (!networkName.includes("ETH") && !networkName.includes("EOS") && !networkName.includes("ATOM")) {
+                            $('.compressed-key-option').removeClass('hidden');
+                        } else {
+                            $('.compressed-key-option').addClass('hidden');
+                        }
+                        
+                        var keyPair;
+                        var compressed = $('#private-key-compressed').is(':checked');
+                        
+                        // Try to parse the private key in different formats
+                        var isWifFormat = false;
+                        try {
+                            // Try WIF format first
+                            keyPair = libs.bitcoin.ECPair.fromWIF(privKeyInput, bitcoinNetwork);
+                            isWifFormat = true;
+                        } catch (e1) {
+                            // Not WIF, try hex format
+                            var hexKey = privKeyInput;
+                            
+                            // Remove 0x prefix if present (common for Ethereum)
+                            if (hexKey.indexOf('0x') === 0 || hexKey.indexOf('0X') === 0) {
+                                hexKey = hexKey.substring(2);
+                            }
+                            
+                            // Validate hex format (64 characters)
+                            if (!hexKey.match(/^[0-9a-fA-F]{64}$/)) {
+                                throw new Error("Invalid private key format. Expected 64 hex characters.");
+                            }
+                            
+                            // Create ECPair from hex - we need a different approach
+                            // Since we can't directly parse hex to BigInteger, we'll convert to WIF first
+                            try {
+                                // Create a dummy seed to get access to the library functions
+                                // Use the BigInteger class from the libs
+                                var BigIntClass = libs.BigInteger;
+                                
+                                // Convert hex string to BigInteger
+                                var privateKeyBigInt = new BigIntClass(hexKey, 16);
+                                
+                                // Create the key pair with the BigInteger private key
+                                keyPair = new libs.bitcoin.ECPair(privateKeyBigInt, null, {
+                                    network: bitcoinNetwork,
+                                    compressed: compressed
+                                });
+                            } catch (e2) {
+                                throw new Error("Failed to create key pair: " + e2.message);
+                            }
+                        }
+                        
+                        // Generate public key and address based on network type
+                        var pubkey = '';
+                        var address = '';
+                        var wif = '';
+                        
+                        // Only support Bitcoin and Bitcoin-like coins that use standard WIF format
+                        // Unsupported: Ethereum, EVM chains, Cosmos, XRP, and other special formats
+                        if (networkName.includes("ETH") || networkName.includes("BNB") || networkName.includes("MATIC") || 
+                            networkName.includes("AVAX") || networkName.includes("FTM") || networkName.includes("xDAI") ||
+                            networkName.includes("ATOM") || networkName.includes("LUNA") || networkName.includes("OSMO") ||
+                            networkName.includes("XRP") || networkName.includes("XLM") || networkName.includes("NANO") ||
+                            networkName.includes("NAS") || networkName.includes("TRX") || networkName.includes("EOS") ||
+                            networkName.includes("FIO") || networkName.includes("RUNE") || networkName.includes("SOL") ||
+                            networkName.includes("ALGO") || networkName.includes("DOT") || networkName.includes("KSM") ||
+                            networkName.includes("ADA") || networkName.includes("XTZ") || networkName.includes("HBAR") ||
+                            networkName.includes("NEAR") || networkName.includes("FLOW") || networkName.includes("ICP") ||
+                            networkName.includes("STX") || networkName.includes("HNS") || networkName.includes("AR") ||
+                            networkName.includes("FIL") || networkName.includes("MINA") || networkName.includes("CELO") ||
+                            networkName.includes("KAVA") || networkName.includes("BAND") || networkName.includes("IRIS") ||
+                            networkName.includes("IOV") || networkName.includes("XWC") || networkName.includes("NRG")) {
+                            throw new Error("This cryptocurrency is not supported for private key input. Please use the Mnemonic tab instead.");
+                        }
+                        // Handle Bitcoin and Bitcoin-like coins (BTC, BCH, LTC, DOGE, DASH, ZEC, etc.)
+                        else {
+                            pubkey = keyPair.getPublicKeyBuffer().toString('hex');
+                            
+                            // Check for SegWit address type selection
+                            var addressType = $('#private-key-address-type').val();
+                            
+                            if (networkName === "BTC - Bitcoin" && addressType === "p2wpkh") {
+                                // Native SegWit (Bech32)
+                                var keyhash = libs.bitcoin.crypto.hash160(keyPair.getPublicKeyBuffer());
+                                var scriptpubkey = libs.bitcoin.script.witnessPubKeyHash.output.encode(keyhash);
+                                address = libs.bitcoin.address.fromOutputScript(scriptpubkey, bitcoinNetwork);
+                            } else if (networkName === "BTC - Bitcoin" && addressType === "p2sh-p2wpkh") {
+                                // Nested SegWit
+                                var keyhash = libs.bitcoin.crypto.hash160(keyPair.getPublicKeyBuffer());
+                                var scriptsig = libs.bitcoin.script.witnessPubKeyHash.output.encode(keyhash);
+                                var addressbytes = libs.bitcoin.crypto.hash160(scriptsig);
+                                var scriptpubkey = libs.bitcoin.script.scriptHash.output.encode(addressbytes);
+                                address = libs.bitcoin.address.fromOutputScript(scriptpubkey, bitcoinNetwork);
+                            } else {
+                                // Legacy address
+                                address = keyPair.getAddress().toString();
+                            }
+                            
+                            wif = keyPair.toWIF();
+                        }
+                        
+                        // Display results
+                        $('#private-key-public').val(pubkey);
+                        $('#private-key-address').val(address);
+                        
+                        // Only show WIF if the input was not already in WIF format
+                        if (isWifFormat) {
+                            // Hide WIF field if input was already WIF or not applicable
+                            $('#private-key-wif').parent().parent().addClass('hidden');
+                        } else {
+                            // Show WIF field if we converted from hex to WIF
+                            $('#private-key-wif').parent().parent().removeClass('hidden');
+                            $('#private-key-wif').val(wif);
+                        }
+                        
+                        $('#private-key-results').removeClass('hidden');
+                        
+                    } catch (error) {
+                        // Don't log error to console for security - it might contain private key info
+                        var safeErrorMessage = 'Error: ' + (error.message || 'Invalid private key or network configuration');
+                        // Sanitize error message to prevent XSS
+                        $('#private-key-error').removeClass('hidden').text(safeErrorMessage.replace(/[<>]/g, ''));
+                    }
+                }
+                
+                // Event handlers for private key input
+                $('#private-key-input, #network-private-key, #private-key-address-type, #private-key-compressed').on('change input', function() {
+                    processPrivateKey();
+                });
+                
+                // Function to securely clear private key data
+                function clearPrivateKeyData() {
+                    // Overwrite values before clearing for better security
+                    var fields = ['#private-key-input', '#private-key-public', '#private-key-address', '#private-key-wif'];
+                    fields.forEach(function(field) {
+                        var $field = $(field);
+                        if ($field.val()) {
+                            // Overwrite with random data before clearing
+                            $field.val('0'.repeat($field.val().length));
+                            $field.val('');
+                        }
+                    });
+                    $('#private-key-results').addClass('hidden');
+                    $('#private-key-error').addClass('hidden').text('');
+                }
+                
+                $('#start-with-tabs a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+                    var target = $(e.target).attr("href");
+                    if (target === "#start-private-key") {
+                        // Try to copy options again when switching to Private Key tab
+                        copyNetworkOptions();
+                        
+                        // Securely clear Private Key fields
+                        clearPrivateKeyData();
+                        
+                        // Hide Derivation Path section
+                        $('#derivation-path-section').hide();
+                        $('#derivation-path-section').prev('hr').hide();
+                        // Hide Derived Addresses section
+                        $('#derived-addresses-section').hide();
+                        $('#derived-addresses-section').prev('hr').hide();
+                        // Hide More Rows section
+                        $('#more-rows-section').hide();
+                    } else if (target === "#start-mnemonic") {
+                        // Clear Mnemonic fields when switching back from Private Key
+                        $('#phrase').val('');
+                        $('#passphrase').val('');
+                        $('#seed').val('');
+                        $('#root-key').val('');
+                        $('.addresses').empty();
+                        
+                        // Show Derivation Path section
+                        $('#derivation-path-section').show();
+                        $('#derivation-path-section').prev('hr').show();
+                        // Show Derived Addresses section
+                        $('#derived-addresses-section').show();
+                        $('#derived-addresses-section').prev('hr').show();
+                        // Show More Rows section
+                        $('#more-rows-section').show();
+                    }
+                });
+            });
+        </script>
     </body>
 </html>

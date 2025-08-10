@@ -3994,5 +3994,10 @@
     // ELA - Elastos functions - end
 
     init();
+    
+    // Export necessary variables for Private Key tab functionality
+    window.networks = networks;
+    window.network = network;
+    window.libs = libs;
 
 })();
