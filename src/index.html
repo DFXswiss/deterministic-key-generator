@@ -456,9 +456,12 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="private-key-input" class="col-sm-2 control-label">Private Key</label>
-                                    <div class="col-sm-10">
+                                    <div class="col-sm-8">
                                         <textarea id="private-key-input" class="private-key-field private-data form-control" placeholder="Enter private key (WIF, Hex, or Nostr nsec format)" data-show-qr autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
                                         <span class="help-block">Supported formats: WIF, Hexadecimal (64 chars, with or without 0x prefix), Nostr nsec</span>
+                                    </div>
+                                    <div class="col-sm-2">
+                                        <button type="button" id="generate-private-key" class="btn btn-primary btn-block"><b>GENERATE</b></button>
                                     </div>
                                 </div>
                                 
@@ -1386,6 +1389,39 @@
         <script>
             // Handle Start with tab switching
             $(document).ready(function() {
+                // Check URL parameters to see if we should open a specific tab
+                function checkUrlParameters() {
+                    // For older browsers that don't support URLSearchParams
+                    var urlParams;
+                    if (typeof URLSearchParams !== 'undefined') {
+                        urlParams = new URLSearchParams(window.location.search);
+                    } else {
+                        // Fallback for older browsers
+                        urlParams = {
+                            get: function(name) {
+                                var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+                                return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+                            }
+                        };
+                    }
+                    
+                    var tab = urlParams.get('tab');
+                    
+                    if (tab === 'privatekey' || tab === 'private-key' || tab === 'privkey' || tab === 'private') {
+                        // Activate the Private Key tab
+                        // Use setTimeout to ensure the DOM is fully loaded
+                        setTimeout(function() {
+                            $('#start-with-tabs a[href="#start-private-key"]').tab('show');
+                        }, 100);
+                    } else if (tab === 'mnemonic') {
+                        // Activate the Mnemonic tab (default)
+                        $('#start-with-tabs a[href="#start-mnemonic"]').tab('show');
+                    }
+                }
+                
+                // Call on page load
+                checkUrlParameters();
+                
                 // Function to copy network options
                 function copyNetworkOptions() {
                     if ($('#network-phrase option').length > 0 && $('#network-private-key option').length === 0) {
@@ -1754,6 +1790,89 @@
                             $('#fetch-ark-info').text('Fetch Info').prop('disabled', false);
                         }
                     });
+                });
+                
+                // Generate random private key button handler
+                $('#generate-private-key').on('click', function() {
+                    var networkIndex = $('#network-private-key').val();
+                    
+                    if (!networkIndex) {
+                        alert('Please select a coin first');
+                        return;
+                    }
+                    
+                    try {
+                        // Check if required global variables are available
+                        if (typeof networks === 'undefined' || typeof libs === 'undefined') {
+                            throw new Error('Required libraries not loaded. Please refresh the page.');
+                        }
+                        
+                        // Get the network configuration
+                        var networkConfig = networks[parseInt(networkIndex)];
+                        
+                        // Call onSelect to set up the network properly
+                        if (networkConfig && networkConfig.onSelect) {
+                            networkConfig.onSelect();
+                        }
+                        
+                        // Use the global network variable that was set by onSelect
+                        var bitcoinNetwork = (typeof network !== 'undefined' ? network : libs.bitcoin.networks.bitcoin);
+                        
+                        // Generate random private key
+                        var randomBytes = new Uint8Array(32);
+                        if (window.crypto && window.crypto.getRandomValues) {
+                            window.crypto.getRandomValues(randomBytes);
+                        } else {
+                            // Fallback for older browsers
+                            for (var i = 0; i < 32; i++) {
+                                randomBytes[i] = Math.floor(Math.random() * 256);
+                            }
+                        }
+                        
+                        // Convert to hex string
+                        var hexKey = '';
+                        for (var i = 0; i < randomBytes.length; i++) {
+                            var hex = randomBytes[i].toString(16);
+                            if (hex.length === 1) hex = '0' + hex;
+                            hexKey += hex;
+                        }
+                        
+                        // Create ECPair from the random bytes
+                        var bytes = [];
+                        for (var i = 0; i < hexKey.length; i += 2) {
+                            bytes.push(parseInt(hexKey.substr(i, 2), 16));
+                        }
+                        
+                        // Get BigInteger class from a dummy node
+                        var dummyNode = libs.bitcoin.HDNode.fromSeedHex('0000000000000000000000000000000000000000000000000000000000000001');
+                        var BigIntClass = dummyNode.keyPair.d.constructor;
+                        
+                        var privateKeyBigInt;
+                        if (BigIntClass.fromByteArrayUnsigned) {
+                            privateKeyBigInt = BigIntClass.fromByteArrayUnsigned(bytes);
+                        } else {
+                            privateKeyBigInt = new BigIntClass(hexKey, 16);
+                        }
+                        
+                        // Create ECPair with compressed key by default
+                        var keyPair = new libs.bitcoin.ECPair(privateKeyBigInt, null, {
+                            network: bitcoinNetwork,
+                            compressed: true
+                        });
+                        
+                        // Convert to WIF format for display
+                        var wif = keyPair.toWIF();
+                        
+                        // Set the private key in the input field
+                        $('#private-key-input').val(wif);
+                        
+                        // Process the private key to show results
+                        processPrivateKey();
+                        
+                    } catch (error) {
+                        console.error('Error generating private key:', error);
+                        alert('Error generating private key: ' + error.message);
+                    }
                 });
                 
                 $('#start-with-tabs a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
