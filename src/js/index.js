@@ -2574,6 +2574,13 @@
             },
         },
         {
+            name: "BTC - Bitcoin Ark Testnet",
+            onSelect: function() {
+                network = libs.bitcoin.networks.testnet;
+                setHdCoin(1);
+            },
+        },
+        {
             name: "BTC - Bitcoin Testnet",
             onSelect: function() {
                 network = libs.bitcoin.networks.testnet;

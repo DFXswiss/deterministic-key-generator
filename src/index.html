@@ -447,18 +447,18 @@
                             <h2>Private Key</h2>
                             <form class="form-horizontal" role="form">
                                 <div class="form-group">
-                                    <label for="private-key-input" class="col-sm-2 control-label">Private Key</label>
-                                    <div class="col-sm-10">
-                                        <textarea id="private-key-input" class="private-key-field private-data form-control" placeholder="Enter private key (WIF or Hex format)" data-show-qr autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
-                                        <span class="help-block">Supported formats: WIF, Hexadecimal (64 chars, with or without 0x prefix)</span>
-                                    </div>
-                                </div>
-                                <div class="form-group">
                                     <label for="network-private-key" class="col-sm-2 control-label">Coin</label>
                                     <div class="col-sm-10">
                                         <select id="network-private-key" class="network-private form-control">
                                             <!-- populated by javascript -->
                                         </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="private-key-input" class="col-sm-2 control-label">Private Key</label>
+                                    <div class="col-sm-10">
+                                        <textarea id="private-key-input" class="private-key-field private-data form-control" placeholder="Enter private key (WIF, Hex, or Nostr nsec format)" data-show-qr autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+                                        <span class="help-block">Supported formats: WIF, Hexadecimal (64 chars, with or without 0x prefix), Nostr nsec</span>
                                     </div>
                                 </div>
                                 
@@ -482,6 +482,63 @@
                                                     <input type="checkbox" id="private-key-compressed" checked>
                                                     Use compressed public key
                                                 </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Ark specific parameters -->
+                                    <div class="ark-params hidden">
+                                        <hr>
+                                        <h4>Ark Server Configuration</h4>
+                                        <div class="form-group">
+                                            <label class="col-sm-2 control-label">Ark Server URL</label>
+                                            <div class="col-sm-8">
+                                                <input type="text" id="ark-server-url" class="form-control" value="https://mutinynet.arkade.sh">
+                                            </div>
+                                            <div class="col-sm-2">
+                                                <button type="button" id="fetch-ark-info" class="btn btn-primary btn-block">Fetch Info</button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-sm-2 control-label">Server Public Key (S)</label>
+                                            <div class="col-sm-10">
+                                                <input type="text" id="ark-server-pubkey" class="form-control" placeholder="Will be fetched from server">
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-sm-2 control-label">Exit Delay (T)</label>
+                                            <div class="col-sm-10">
+                                                <input type="number" id="ark-exit-delay" class="form-control" placeholder="Blocks">
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-sm-2 control-label">Network</label>
+                                            <div class="col-sm-10">
+                                                <input type="text" id="ark-network" class="form-control" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-sm-2 control-label">VTXO Tree Expiry</label>
+                                            <div class="col-sm-10">
+                                                <input type="number" id="ark-vtxo-expiry" class="form-control">
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-sm-2 control-label">Round Interval</label>
+                                            <div class="col-sm-10">
+                                                <input type="number" id="ark-round-interval" class="form-control">
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-sm-2 control-label">Dust</label>
+                                            <div class="col-sm-10">
+                                                <input type="number" id="ark-dust" class="form-control">
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-sm-2 control-label">Forfeit Address</label>
+                                            <div class="col-sm-10">
+                                                <input type="text" id="ark-forfeit-address" class="form-control">
                                             </div>
                                         </div>
                                     </div>
@@ -1390,24 +1447,9 @@
                         // Note: network is a global variable set by onSelect
                         var bitcoinNetwork = (typeof network !== 'undefined' ? network : libs.bitcoin.networks.bitcoin);
                         
-                        // Show/hide additional options based on network
-                        $('#private-key-additional-params').removeClass('hidden');
-                        
                         var networkName = networkConfig.name;
                         
-                        // Show segwit options for Bitcoin
-                        if (networkName === "BTC - Bitcoin" || networkName === "LTC - Litecoin") {
-                            $('.segwit-options').removeClass('hidden');
-                        } else {
-                            $('.segwit-options').addClass('hidden');
-                        }
-                        
-                        // Show compressed key option for Bitcoin-like coins
-                        if (!networkName.includes("ETH") && !networkName.includes("EOS") && !networkName.includes("ATOM")) {
-                            $('.compressed-key-option').removeClass('hidden');
-                        } else {
-                            $('.compressed-key-option').addClass('hidden');
-                        }
+                        // Note: Additional params visibility is now handled by network selection change event
                         
                         var keyPair;
                         var compressed = $('#private-key-compressed').is(':checked');
@@ -1419,28 +1461,74 @@
                             keyPair = libs.bitcoin.ECPair.fromWIF(privKeyInput, bitcoinNetwork);
                             isWifFormat = true;
                         } catch (e1) {
-                            // Not WIF, try hex format
+                            // Not WIF, try other formats
                             var hexKey = privKeyInput;
                             
+                            // Check for Nostr nsec format (Bech32 encoded)
+                            if (hexKey.startsWith('nsec1')) {
+                                try {
+                                    // Decode Nostr nsec (Bech32) to get the private key
+                                    // The bech32 library structure varies
+                                    var bech32lib = libs.bech32;
+                                    
+                                    // Check which API is available
+                                    var decoded;
+                                    if (bech32lib.bech32 && bech32lib.bech32.decode) {
+                                        // Nested structure
+                                        decoded = bech32lib.bech32.decode(hexKey);
+                                        var bytes = bech32lib.bech32.fromWords(decoded.words);
+                                    } else if (bech32lib.decode) {
+                                        // Direct structure
+                                        decoded = bech32lib.decode(hexKey);
+                                        var bytes = bech32lib.fromWords(decoded.words);
+                                    } else {
+                                        throw new Error("Bech32 library not properly loaded");
+                                    }
+                                    
+                                    // Convert bytes to hex
+                                    hexKey = '';
+                                    for (var i = 0; i < bytes.length; i++) {
+                                        var hex = bytes[i].toString(16);
+                                        if (hex.length === 1) hex = '0' + hex;
+                                        hexKey += hex;
+                                    }
+                                } catch (bech32Error) {
+                                    // Don't throw here, let it fall through to the general error
+                                    // This allows the error message to be more helpful
+                                    hexKey = privKeyInput; // Reset to original
+                                }
+                            }
                             // Remove 0x prefix if present (common for Ethereum)
-                            if (hexKey.indexOf('0x') === 0 || hexKey.indexOf('0X') === 0) {
+                            else if (hexKey.indexOf('0x') === 0 || hexKey.indexOf('0X') === 0) {
                                 hexKey = hexKey.substring(2);
                             }
                             
                             // Validate hex format (64 characters)
                             if (!hexKey.match(/^[0-9a-fA-F]{64}$/)) {
-                                throw new Error("Invalid private key format. Expected 64 hex characters.");
+                                throw new Error("Invalid private key format. Expected WIF, 64 hex characters, or Nostr nsec format.");
                             }
                             
                             // Create ECPair from hex - we need a different approach
                             // Since we can't directly parse hex to BigInteger, we'll convert to WIF first
                             try {
-                                // Create a dummy seed to get access to the library functions
-                                // Use the BigInteger class from the libs
-                                var BigIntClass = libs.BigInteger;
+                                // Convert hex to bytes first
+                                var bytes = [];
+                                for (var i = 0; i < hexKey.length; i += 2) {
+                                    bytes.push(parseInt(hexKey.substr(i, 2), 16));
+                                }
                                 
-                                // Convert hex string to BigInteger
-                                var privateKeyBigInt = new BigIntClass(hexKey, 16);
+                                // Get BigInteger class from a dummy HDNode
+                                var dummyNode = libs.bitcoin.HDNode.fromSeedHex('0000000000000000000000000000000000000000000000000000000000000001');
+                                var BigIntClass = dummyNode.keyPair.d.constructor;
+                                
+                                // Create BigInteger from bytes
+                                var privateKeyBigInt;
+                                if (BigIntClass.fromByteArrayUnsigned) {
+                                    privateKeyBigInt = BigIntClass.fromByteArrayUnsigned(bytes);
+                                } else {
+                                    // Try direct constructor with reversed bytes (little-endian)
+                                    privateKeyBigInt = new BigIntClass(bytes.reverse());
+                                }
                                 
                                 // Create the key pair with the BigInteger private key
                                 keyPair = new libs.bitcoin.ECPair(privateKeyBigInt, null, {
@@ -1457,9 +1545,45 @@
                         var address = '';
                         var wif = '';
                         
+                        // Handle Bitcoin Ark Testnet specially
+                        if (networkName === "BTC - Bitcoin Ark Testnet") {
+                            // For Ark, we need server info to generate special address
+                            // Get user's public key
+                            var userPubkey = keyPair.getPublicKeyBuffer();
+                            pubkey = userPubkey.toString('hex');
+                            wif = keyPair.toWIF();
+                            
+                            // Get server params from form fields
+                            var serverPubkey = $('#ark-server-pubkey').val();
+                            var exitDelay = $('#ark-exit-delay').val();
+                            var arkNetwork = $('#ark-network').val();
+                            
+                            if (serverPubkey && exitDelay) {
+                                // Generate Ark address info with the form data
+                                var arkInfo = "Ark Address Parameters:\n" +
+                                             "User Pubkey (A): " + pubkey + "\n" +
+                                             "Server Pubkey (S): " + serverPubkey + "\n" + 
+                                             "Exit Delay (T): " + exitDelay + " blocks\n" +
+                                             "Network: " + arkNetwork + "\n\n" +
+                                             "Script: A + S | A after T\n\n" +
+                                             "Note: Full address encoding requires @arkade-os/sdk";
+                                
+                                address = arkInfo;
+                            } else {
+                                address = "Please fetch server info or fill in the Ark parameters below";
+                            }
+                            
+                            // Display results
+                            $('#private-key-public').val(pubkey);
+                            $('#private-key-address').val(address);
+                            $('#private-key-wif').val(wif);
+                            $('#private-key-results').removeClass('hidden');
+                            
+                            return; // Exit early for Ark
+                        }
                         // Only support Bitcoin and Bitcoin-like coins that use standard WIF format
                         // Unsupported: Ethereum, EVM chains, Cosmos, XRP, and other special formats
-                        if (networkName.includes("ETH") || networkName.includes("BNB") || networkName.includes("MATIC") || 
+                        else if (networkName.includes("ETH") || networkName.includes("BNB") || networkName.includes("MATIC") || 
                             networkName.includes("AVAX") || networkName.includes("FTM") || networkName.includes("xDAI") ||
                             networkName.includes("ATOM") || networkName.includes("LUNA") || networkName.includes("OSMO") ||
                             networkName.includes("XRP") || networkName.includes("XLM") || networkName.includes("NANO") ||
@@ -1515,7 +1639,10 @@
                             $('#private-key-wif').val(wif);
                         }
                         
-                        $('#private-key-results').removeClass('hidden');
+                        // Don't show results here for Ark (already shown in async handler)
+                        if (networkName !== "BTC - Bitcoin Ark Testnet") {
+                            $('#private-key-results').removeClass('hidden');
+                        }
                         
                     } catch (error) {
                         // Don't log error to console for security - it might contain private key info
@@ -1525,9 +1652,55 @@
                     }
                 }
                 
-                // Event handlers for private key input
-                $('#private-key-input, #network-private-key, #private-key-address-type, #private-key-compressed').on('change input', function() {
+                // Event handlers for private key input and Ark parameters
+                $('#private-key-input, #private-key-address-type, #private-key-compressed').on('change input', function() {
                     processPrivateKey();
+                });
+                
+                // Handle network selection change separately to show/hide params immediately
+                $('#network-private-key').on('change', function() {
+                    var networkName = $('#network-private-key option:selected').text();
+                    
+                    // Show/hide additional params based on selection
+                    $('#private-key-additional-params').removeClass('hidden');
+                    
+                    // Show segwit options for Bitcoin
+                    if (networkName === "BTC - Bitcoin" || networkName === "LTC - Litecoin") {
+                        $('.segwit-options').removeClass('hidden');
+                    } else {
+                        $('.segwit-options').addClass('hidden');
+                    }
+                    
+                    // Show Ark params for Bitcoin Ark Testnet
+                    if (networkName === "BTC - Bitcoin Ark Testnet") {
+                        $('.ark-params').removeClass('hidden');
+                        // Auto-fetch server info if URL is present and fields are empty
+                        if ($('#ark-server-url').val() && !$('#ark-server-pubkey').val()) {
+                            $('#fetch-ark-info').click();
+                        }
+                    } else {
+                        $('.ark-params').addClass('hidden');
+                    }
+                    
+                    // Show compressed key option for Bitcoin-like coins
+                    if (!networkName.includes("ETH") && !networkName.includes("EOS") && !networkName.includes("ATOM")) {
+                        $('.compressed-key-option').removeClass('hidden');
+                    } else {
+                        $('.compressed-key-option').addClass('hidden');
+                    }
+                    
+                    // Process private key if one is entered
+                    if ($('#private-key-input').val()) {
+                        processPrivateKey();
+                    }
+                });
+                
+                // Update display when Ark parameters change
+                $('#ark-server-pubkey, #ark-exit-delay, #ark-network').on('change input', function() {
+                    var networkName = $('#network-private-key option:selected').text();
+                    if (networkName === "BTC - Bitcoin Ark Testnet" && $('#private-key-input').val()) {
+                        processPrivateKey();
+                    }
                 });
                 
                 // Function to securely clear private key data
@@ -1545,6 +1718,43 @@
                     $('#private-key-results').addClass('hidden');
                     $('#private-key-error').addClass('hidden').text('');
                 }
+                
+                // Fetch Ark server info button handler
+                $('#fetch-ark-info').on('click', function() {
+                    var serverUrl = $('#ark-server-url').val();
+                    if (!serverUrl) {
+                        alert('Please enter an Ark server URL');
+                        return;
+                    }
+                    
+                    // Show loading state
+                    $(this).text('Fetching...').prop('disabled', true);
+                    
+                    $.ajax({
+                        url: serverUrl + '/v1/info',
+                        method: 'GET',
+                        success: function(serverInfo) {
+                            // Fill in all the form fields
+                            $('#ark-server-pubkey').val(serverInfo.signerPubkey || '');
+                            $('#ark-exit-delay').val(serverInfo.unilateralExitDelay || '');
+                            $('#ark-network').val(serverInfo.network || '');
+                            $('#ark-vtxo-expiry').val(serverInfo.vtxoTreeExpiry || '');
+                            $('#ark-round-interval').val(serverInfo.roundInterval || '');
+                            $('#ark-dust').val(serverInfo.dust || '');
+                            $('#ark-forfeit-address').val(serverInfo.forfeitAddress || '');
+                            
+                            // Reset button
+                            $('#fetch-ark-info').text('Fetch Info').prop('disabled', false);
+                            
+                            // Re-process private key to update the display
+                            processPrivateKey();
+                        },
+                        error: function(xhr, status, error) {
+                            alert('Error fetching server info: ' + error);
+                            $('#fetch-ark-info').text('Fetch Info').prop('disabled', false);
+                        }
+                    });
+                });
                 
                 $('#start-with-tabs a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
                     var target = $(e.target).attr("href");
