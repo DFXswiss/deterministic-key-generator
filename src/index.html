@@ -563,6 +563,12 @@
                                             <textarea id="private-key-address" class="form-control" readonly data-show-qr autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
                                         </div>
                                     </div>
+                                    <div class="form-group ark-address-params hidden">
+                                        <label class="col-sm-2 control-label">Ark Address Parameters</label>
+                                        <div class="col-sm-10">
+                                            <textarea id="ark-address-params" class="form-control" readonly rows="8" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+                                        </div>
+                                    </div>
                                     <div class="form-group">
                                         <label class="col-sm-2 control-label">Private Key (WIF)</label>
                                         <div class="col-sm-10">
@@ -1524,6 +1530,8 @@
                     $('#private-key-public').val('');
                     $('#private-key-address').val('');
                     $('#private-key-wif').val('');
+                    $('#ark-address-params').val('');
+                    $('.ark-address-params').addClass('hidden');
                     
                     if (!privKeyInput) {
                         return;
@@ -1663,19 +1671,25 @@
                             var exitDelay = $('#ark-exit-delay').val();
                             var arkNetwork = $('#ark-network').val();
                             
+                            // Show Ark parameters field
+                            $('.ark-address-params').removeClass('hidden');
+                            
                             if (serverPubkey && exitDelay) {
                                 // Generate Ark address info with the form data
-                                var arkInfo = "Ark Address Parameters:\n" +
-                                             "User Pubkey (A): " + pubkey + "\n" +
+                                var arkInfo = "User Pubkey (A): " + pubkey + "\n" +
                                              "Server Pubkey (S): " + serverPubkey + "\n" + 
                                              "Exit Delay (T): " + exitDelay + " blocks\n" +
                                              "Network: " + arkNetwork + "\n\n" +
                                              "Script: A + S | A after T\n\n" +
                                              "Note: Full address encoding requires @arkade-os/sdk";
                                 
-                                address = arkInfo;
+                                // Put Ark info in dedicated field
+                                $('#ark-address-params').val(arkInfo);
+                                // Leave address field empty or with note
+                                address = "See Ark Address Parameters below";
                             } else {
-                                address = "Please fetch server info or fill in the Ark parameters below";
+                                $('#ark-address-params').val("Please fetch server info or fill in the Ark parameters above");
+                                address = "Ark parameters required";
                             }
                             
                             // Display results
@@ -1811,7 +1825,7 @@
                 // Function to securely clear private key data
                 function clearPrivateKeyData() {
                     // Overwrite values before clearing for better security
-                    var fields = ['#private-key-input', '#private-key-public', '#private-key-address', '#private-key-wif'];
+                    var fields = ['#private-key-input', '#private-key-public', '#private-key-address', '#private-key-wif', '#ark-address-params'];
                     fields.forEach(function(field) {
                         var $field = $(field);
                         if ($field.val()) {
@@ -1821,6 +1835,7 @@
                         }
                     });
                     $('#private-key-results').addClass('hidden');
+                    $('.ark-address-params').addClass('hidden');
                     $('#private-key-error').addClass('hidden').text('');
                 }
                 
