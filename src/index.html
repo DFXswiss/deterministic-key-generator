@@ -1406,17 +1406,86 @@
                     }
                     
                     var tab = urlParams.get('tab');
+                    var coin = urlParams.get('coin');
                     
                     if (tab === 'privatekey' || tab === 'private-key' || tab === 'privkey' || tab === 'private') {
                         // Activate the Private Key tab
                         // Use setTimeout to ensure the DOM is fully loaded
                         setTimeout(function() {
                             $('#start-with-tabs a[href="#start-private-key"]').tab('show');
+                            
+                            // Set coin if specified
+                            if (coin) {
+                                selectCoinByParameter(coin, '#network-private-key');
+                            }
                         }, 100);
                     } else if (tab === 'mnemonic') {
                         // Activate the Mnemonic tab (default)
                         $('#start-with-tabs a[href="#start-mnemonic"]').tab('show');
+                        
+                        // Set coin if specified
+                        if (coin) {
+                            setTimeout(function() {
+                                selectCoinByParameter(coin, '#network-phrase');
+                            }, 100);
+                        }
+                    } else if (coin) {
+                        // If only coin is specified without tab, apply to current tab
+                        setTimeout(function() {
+                            selectCoinByParameter(coin, '#network-phrase');
+                        }, 100);
                     }
+                }
+                
+                // Function to select coin based on URL parameter
+                function selectCoinByParameter(coinParam, selector) {
+                    // Wait for network options to be loaded
+                    var waitForOptions = setInterval(function() {
+                        if ($(selector + ' option').length > 0) {
+                            clearInterval(waitForOptions);
+                            
+                            // Convert parameter to lowercase for case-insensitive matching
+                            var searchParam = coinParam.toLowerCase();
+                            
+                            // Try to find matching coin
+                            var found = false;
+                            $(selector + ' option').each(function() {
+                                var optionText = $(this).text().toLowerCase();
+                                var optionValue = $(this).val();
+                                
+                                // Check various matching patterns
+                                if (optionText === searchParam || 
+                                    optionText.includes(searchParam) ||
+                                    optionText.replace(/\s+/g, '').includes(searchParam.replace(/\s+/g, '')) ||
+                                    optionText.replace(/[\s-]/g, '').includes(searchParam.replace(/[\s-]/g, ''))) {
+                                    
+                                    // Special handling for common coin abbreviations
+                                    if ((searchParam === 'btc' && optionText.includes('btc - bitcoin') && !optionText.includes('testnet') && !optionText.includes('ark')) ||
+                                        (searchParam === 'bitcoin' && optionText === 'btc - bitcoin') ||
+                                        (searchParam === 'btc testnet' && optionText === 'btc - bitcoin testnet') ||
+                                        (searchParam === 'ark' && optionText === 'btc - bitcoin ark testnet') ||
+                                        (searchParam === 'eth' && optionText.includes('eth - ethereum')) ||
+                                        (searchParam === 'ltc' && optionText.includes('ltc - litecoin'))) {
+                                        $(selector).val(optionValue).trigger('change');
+                                        found = true;
+                                        return false; // Break the loop
+                                    }
+                                    
+                                    // If not a special case, take the first match
+                                    if (!found) {
+                                        $(selector).val(optionValue).trigger('change');
+                                        found = true;
+                                        return false; // Break the loop
+                                    }
+                                }
+                            });
+                        }
+                    }, 50);
+                    
+                    // Stop waiting after 5 seconds
+                    setTimeout(function() {
+                        clearInterval(waitForOptions);
+                    }, 5000);
                 }
                 
                 // Call on page load
