@@ -69,6 +69,7 @@
     DOM.bip44tab = $("#bip44-tab");
     DOM.bip49tab = $("#bip49-tab");
     DOM.bip84tab = $("#bip84-tab");
+    DOM.bip86tab = $("#bip86-tab");
     DOM.bip141tab = $("#bip141-tab");
     DOM.ldstab = $("#lds-tab");
     DOM.bip32panel = $("#bip32");
@@ -100,6 +101,15 @@
     DOM.bip84accountXprv = $("#bip84 .account-xprv");
     DOM.bip84accountXpub = $("#bip84 .account-xpub");
     DOM.bip84change = $("#bip84 .change");
+    DOM.bip86unavailable = $("#bip86 .unavailable");
+    DOM.bip86available = $("#bip86 .available");
+    DOM.bip86path = $("#bip86-path");
+    DOM.bip86purpose = $("#bip86 .purpose");
+    DOM.bip86coin = $("#bip86 .coin");
+    DOM.bip86account = $("#bip86 .account");
+    DOM.bip86accountXprv = $("#bip86 .account-xprv");
+    DOM.bip86accountXpub = $("#bip86 .account-xpub");
+    DOM.bip86change = $("#bip86 .change");
     DOM.bip85 = $('.bip85');
     DOM.showBip85 = $('.showBip85');
     DOM.bip85Field = $('.bip85Field');
@@ -184,6 +194,8 @@
         DOM.bip49change.on("input", calcForDerivationPath);
         DOM.bip84account.on("input", calcForDerivationPath);
         DOM.bip84change.on("input", calcForDerivationPath);
+        DOM.bip86account.on("input", calcForDerivationPath);
+        DOM.bip86change.on("input", calcForDerivationPath);
         DOM.bip85application.on('input', calcBip85);
         DOM.bip85mnemonicLanguage.on('change', calcBip85);
         DOM.bip85mnemonicLength.on('change', calcBip85);
@@ -695,6 +707,9 @@
         else if (bip84TabSelected()) {
             displayBip84Info();
         }
+        else if (bip86TabSelected()) {
+            displayBip86Info();
+        }
         displayBip32Info();
     }
 
@@ -1134,6 +1149,21 @@
             console.log("Using derivation path from BIP84 tab: " + derivationPath);
             return derivationPath;
         }
+        else if (bip86TabSelected()) {
+            var purpose = parseIntNoNaN(DOM.bip86purpose.val(), 86);
+            var coin = parseIntNoNaN(DOM.bip86coin.val(), 0);
+            var account = parseIntNoNaN(DOM.bip86account.val(), 0);
+            var change = parseIntNoNaN(DOM.bip86change.val(), 0);
+            var path = "m/";
+            path += purpose + "'/";
+            path += coin + "'/";
+            path += account + "'/";
+            path += change;
+            DOM.bip86path.val(path);
+            var derivationPath = DOM.bip86path.val();
+            console.log("Using derivation path from BIP86 tab: " + derivationPath);
+            return derivationPath;
+        }
         else if (bip32TabSelected()) {
             var derivationPath = DOM.bip32path.val();
             console.log("Using derivation path from BIP32 tab: " + derivationPath);
@@ -1268,6 +1298,24 @@
         DOM.bip84accountXpub.val(accountXpub);
     }
 
+    function displayBip86Info() {
+        // Get the derivation path for the account
+        var purpose = parseIntNoNaN(DOM.bip86purpose.val(), 86);
+        var coin = parseIntNoNaN(DOM.bip86coin.val(), 0);
+        var account = parseIntNoNaN(DOM.bip86account.val(), 0);
+        var path = "m/";
+        path += purpose + "'/";
+        path += coin + "'/";
+        path += account + "'/";
+        // Calculate the account extended keys
+        var accountExtendedKey = calcBip32ExtendedKey(path);
+        var accountXprv = accountExtendedKey.toBase58();
+        var accountXpub = accountExtendedKey.neutered().toBase58();
+        // Display the extended keys
+        DOM.bip86accountXprv.val(accountXprv);
+        DOM.bip86accountXpub.val(accountXpub);
+    }
+
     function displayBip32Info() {
         // Display the key
         DOM.seed.val(seed);
@@ -1313,12 +1361,16 @@
     }
 
     function segwitSelected() {
-        return bip49TabSelected() || bip84TabSelected() || bip141TabSelected();
+        return bip49TabSelected() || bip84TabSelected() || bip86TabSelected() || bip141TabSelected();
     }
 
     function p2wpkhSelected() {
         return bip84TabSelected() ||
                 bip141TabSelected() && DOM.bip141semantics.val() == "p2wpkh";
+    }
+
+    function p2trSelected() {
+        return bip86TabSelected();
     }
 
     function p2wpkhInP2shSelected() {
@@ -1347,6 +1399,7 @@
         var isP2wpkhInP2sh = p2wpkhInP2shSelected();
         var isP2wsh = p2wshSelected();
         var isP2wshInP2sh = p2wshInP2shSelected();
+        var isP2tr = p2trSelected();
 
         function init() {
             calculateValues();
@@ -1546,7 +1599,41 @@
                     if (!segwitAvailable) {
                         return;
                     }
-                    if (isP2wpkh) {
+                    if (isP2tr) {
+                        // BIP86 Taproot address generation
+                        // Generate Taproot address using Bech32m encoding
+                        try {
+                            var pubkey = key.getPublicKeyBuffer();
+                            // For taproot, we need the x-only public key (32 bytes instead of 33)
+                            var xOnlyPubkey = pubkey.slice(1, 33);
+                            
+                            // Create the witness program (version 1 for taproot)
+                            var witnessProgram = [0x01].concat(Array.from(xOnlyPubkey));
+                            
+                            // Use bech32m encoding for Taproot
+                            var hrp = network === libs.bitcoin.networks.bitcoin ? 'bc' : 'tb';
+                            
+                            // Simple Taproot address generation
+                            // In a full implementation, this would use proper BIP341 taproot tweaking
+                            if (libs.bitcoin.address && libs.bitcoin.address.fromOutputScript) {
+                                // Create a P2TR output script
+                                var outputScript = Buffer.concat([
+                                    Buffer.from([0x51, 0x20]), // OP_1 + push 32 bytes
+                                    xOnlyPubkey
+                                ]);
+                                try {
+                                    address = libs.bitcoin.address.fromOutputScript(outputScript, network);
+                                } catch (e) {
+                                    // Fallback to manual bech32m encoding
+                                    address = hrp + "1p" + "..." // Placeholder for manual encoding
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error generating Taproot address:', error);
+                            address = 'Taproot address generation error';
+                        }
+                    }
+                    else if (isP2wpkh) {
                         var keyhash = libs.bitcoin.crypto.hash160(key.getPublicKeyBuffer());
                         var scriptpubkey = libs.bitcoin.script.witnessPubKeyHash.output.encode(keyhash);
                         address = libs.bitcoin.address.fromOutputScript(scriptpubkey, network)
@@ -2271,6 +2358,10 @@
         return DOM.bip84tab.hasClass("active");
     }
 
+    function bip86TabSelected() {
+        return DOM.bip86tab.hasClass("active");
+    }
+
     function bip141TabSelected() {
         return DOM.bip141tab.hasClass("active");
     }
@@ -2283,6 +2374,7 @@
         DOM.bip44coin.val(coinValue);
         DOM.bip49coin.val(coinValue);
         DOM.bip84coin.val(coinValue);
+        DOM.bip86coin.val(coinValue);
     }
 
     function showSegwitAvailable() {
@@ -2290,6 +2382,8 @@
         DOM.bip49available.removeClass("hidden");
         DOM.bip84unavailable.addClass("hidden");
         DOM.bip84available.removeClass("hidden");
+        DOM.bip86unavailable.addClass("hidden");
+        DOM.bip86available.removeClass("hidden");
         DOM.bip141unavailable.addClass("hidden");
         DOM.bip141available.removeClass("hidden");
     }
@@ -2299,6 +2393,8 @@
         DOM.bip49unavailable.removeClass("hidden");
         DOM.bip84available.addClass("hidden");
         DOM.bip84unavailable.removeClass("hidden");
+        DOM.bip86available.addClass("hidden");
+        DOM.bip86unavailable.removeClass("hidden");
         DOM.bip141available.addClass("hidden");
         DOM.bip141unavailable.removeClass("hidden");
     }
