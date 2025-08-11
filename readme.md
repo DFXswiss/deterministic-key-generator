@@ -42,23 +42,25 @@ The BIP32 keys can be used at [bip32.org](https://bip32.org) if desired.
 
 The tool supports **200+ cryptocurrencies** including Bitcoin, Ethereum, and many altcoins.
 
-### Full Support (Mnemonic & Private Key)
+### Full Feature Support (Mnemonic & Private Key with all address types)
 
-The following cryptocurrencies support both **BIP39 mnemonic phrases** and **private key import**:
+The following cryptocurrencies support both **BIP39 mnemonic phrases** and **private key import** with all address types (Legacy, SegWit, Native SegWit, Taproot):
 
 #### Bitcoin and Variants
 - **BTC** - Bitcoin
 - **BTC** - Bitcoin Testnet
 - **BTC** - Bitcoin RegTest
-- **BTC** - Bitcoin Ark Testnet
-- **LTC** - Litecoin
+- **BTC** - Bitcoin Ark Testnet (special Ark Layer-2 addresses)
+
+#### Litecoin
+- **LTC** - Litecoin  
 - **LTCt** - Litecoin Testnet
 
-### Mnemonic Only Support
+### Standard Support (Mnemonic & Private Key)
 
-The following cryptocurrencies support **BIP39 mnemonic phrases only** (no private key import):
+All other cryptocurrencies support both **BIP39 mnemonic phrases** and **private key import** with standard address generation:
 
-#### Bitcoin Forks
+#### Bitcoin Forks and Variants
 - **BCH** - Bitcoin Cash
 - **BSV** - BitcoinSV
 - **BTG** - Bitcoin Gold
