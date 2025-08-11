@@ -103,7 +103,7 @@ async function testHTMLStructure() {
         
         // Check for essential elements
         const checks = [
-            { name: 'Private Key tab', pattern: /id="private-key-tab"/ },
+            { name: 'Private Key tab', pattern: /id="start-private-key"/ },
             { name: 'Private Key input', pattern: /id="private-key-input"/ },
             { name: 'Generate button', pattern: /id="generate-private-key"/ },
             { name: 'Ark address function', pattern: /generateArkAddress/ },
