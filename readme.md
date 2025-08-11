@@ -89,27 +89,7 @@ All other cryptocurrencies support both **BIP39 mnemonic phrases** and **private
 - **PART** - Particl
 - **ANON** - ANON
 
-#### Ethereum and EVM Chains
-- **ETH** - Ethereum
-- **ETC** - Ethereum Classic
-- **BSC** - Binance Smart Chain
-- **CLO** - Callisto
-- **ESN** - Ethersocial Network
-- **EWT** - EnergyWeb
-- **EXP** - Expanse
-- **ELLA** - Ellaism
-- **PIRL** - Pirl
-- **MIX** - MIX
-- **MUSIC** - Musicoin
-- **MOAC** - MOAC
-- **ERE** - EtherCore
-- **POA** - Poa
-
 #### Proof of Stake Coins
-- **ATOM** - Cosmos Hub
-- **LUNA** - Terra
-- **RUNE** - THORChain
-- **IOV** - Starname
 - **PPC** - Peercoin
 - **NVC** - Novacoin
 - **RDD** - Reddcoin
@@ -150,13 +130,8 @@ All other cryptocurrencies support both **BIP39 mnemonic phrases** and **private
 - **SWTC** - Jingtum (China)
 
 #### DeFi and Smart Contract Platforms
-- **EOS** - EOSIO
-- **TRX** - Tron
-- **FIO** - Foundation for Interwallet Operability
 - **VET** - VeChain
 - **ELA** - Elastos
-- **NAS** - Nebulas
-- **HNS** - Handshake
 - **DXN** - DEXON
 
 #### Specialized Protocols
@@ -164,9 +139,6 @@ All other cryptocurrencies support both **BIP39 mnemonic phrases** and **private
 - **OMNI** - Omnicore
 - **R-BTC** - RSK
 - **tR-BTC** - RSK Testnet
-- **XRP** - Ripple
-- **XLM** - Stellar
-- **NANO** - Nano
 
 #### Mining-focused Coins
 - **XMY** - Myriadcoin
@@ -244,7 +216,6 @@ All other cryptocurrencies support both **BIP39 mnemonic phrases** and **private
 - **NEBL** - Neblio
 - **NEOS** - Neoscoin
 - **NIX** - NIX Platform
-- **NRG** - Energi
 - **NRO** - Neurocoin
 - **NSR** - Nushares
 - **NYC** - Newyorkc
@@ -285,8 +256,45 @@ All other cryptocurrencies support both **BIP39 mnemonic phrases** and **private
 - **XVG** - Verge
 - **XUEZ** - Xuez
 - **XWCC** - Whitecoin Classic
-- **XWC** - Whitecoin
 - **ZBC** - ZooBlockchain
+
+### Mnemonic Only Support (No Private Key Import)
+
+The following cryptocurrencies only support **BIP39 mnemonic phrases** and do NOT support private key import due to incompatible key formats:
+
+#### EVM/Ethereum-based Chains
+- **ETH** - Ethereum
+- **BSC** - Binance Smart Chain
+- **ETC** - Ethereum Classic
+- **CLO** - Callisto
+- **ESN** - Ethersocial Network
+- **EWT** - EnergyWeb
+- **EXP** - Expanse
+- **ELLA** - Ellaism
+- **PIRL** - Pirl
+- **MIX** - MIX
+- **MUSIC** - Musicoin
+- **MOAC** - MOAC
+- **ERE** - EtherCore
+- **POA** - Poa
+
+#### Cosmos Ecosystem
+- **ATOM** - Cosmos Hub
+- **LUNA** - Terra
+- **RUNE** - THORChain
+- **IOV** - Starname
+
+#### Other Blockchain Platforms
+- **XRP** - Ripple
+- **XLM** - Stellar
+- **NANO** - Nano
+- **NAS** - Nebulas
+- **TRX** - Tron
+- **EOS** - EOSIO
+- **FIO** - Foundation for Interwallet Operability
+- **HNS** - Handshake
+- **NRG** - Energi
+- **XWC** - Whitecoin
 
 ## Making changes
 

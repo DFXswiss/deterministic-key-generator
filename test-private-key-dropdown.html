@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Private Key Dropdown</title>
+    <script src="src/js/jquery-3.2.1.js"></script>
+</head>
+<body>
+    <h1>Testing Private Key Dropdown Filter</h1>
+    
+    <div style="margin: 20px;">
+        <button onclick="testDropdown()">Test Dropdown</button>
+        <div id="results" style="margin-top: 20px;"></div>
+    </div>
+    
+    <iframe id="testFrame" src="src/index.html" style="width: 100%; height: 600px; margin-top: 20px;"></iframe>
+    
+    <script>
+        function testDropdown() {
+            var frame = document.getElementById('testFrame');
+            var frameDoc = frame.contentDocument || frame.contentWindow.document;
+            var $ = frame.contentWindow.$;
+            
+            // Switch to Private Key tab
+            $(frameDoc).find('#start-with-tabs a[href="#start-private-key"]').tab('show');
+            
+            setTimeout(function() {
+                // Get all options in the Private Key dropdown
+                var options = [];
+                $(frameDoc).find('#network-private-key option').each(function() {
+                    options.push($(this).text());
+                });
+                
+                // Check for unsupported coins
+                var unsupportedFound = [];
+                var unsupportedList = ['ETH -', 'BSC -', 'ETC -', 'ATOM -', 'LUNA -', 'XRP -', 'XLM -', 
+                                       'NANO -', 'TRX -', 'EOS -', 'FIO -', 'HNS -', 'NRG -', 'XWC -'];
+                
+                unsupportedList.forEach(function(coin) {
+                    options.forEach(function(option) {
+                        if (option.includes(coin)) {
+                            unsupportedFound.push(option);
+                        }
+                    });
+                });
+                
+                // Display results
+                var resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = '<h3>Test Results:</h3>';
+                resultsDiv.innerHTML += '<p>Total coins in dropdown: ' + options.length + '</p>';
+                
+                if (unsupportedFound.length === 0) {
+                    resultsDiv.innerHTML += '<p style="color: green;">✅ SUCCESS: No unsupported coins found in dropdown!</p>';
+                } else {
+                    resultsDiv.innerHTML += '<p style="color: red;">❌ FAILED: Found ' + unsupportedFound.length + ' unsupported coins:</p>';
+                    resultsDiv.innerHTML += '<ul>';
+                    unsupportedFound.forEach(function(coin) {
+                        resultsDiv.innerHTML += '<li>' + coin + '</li>';
+                    });
+                    resultsDiv.innerHTML += '</ul>';
+                }
+                
+                // Show some supported coins
+                resultsDiv.innerHTML += '<h4>Sample of supported coins in dropdown:</h4>';
+                resultsDiv.innerHTML += '<ul>';
+                for (var i = 0; i < Math.min(10, options.length); i++) {
+                    resultsDiv.innerHTML += '<li>' + options[i] + '</li>';
+                }
+                resultsDiv.innerHTML += '</ul>';
+                
+            }, 1000);
+        }
+        
+        // Auto-run test after page loads
+        window.onload = function() {
+            setTimeout(testDropdown, 2000);
+        };
+    </script>
+</body>
+</html>

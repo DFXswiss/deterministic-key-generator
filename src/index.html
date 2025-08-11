@@ -1627,12 +1627,37 @@
                 // Function to copy network options
                 function copyNetworkOptions() {
                     if ($('#network-phrase option').length > 0 && $('#network-private-key option').length === 0) {
+                        // List of coins that do NOT support private key import
+                        var unsupportedCoins = [
+                            'ETH', 'BSC', 'ETC', 'CLO', 'ESN', 'EWT', 'EXP', 'ELLA', 'PIRL', 
+                            'MIX', 'MUSIC', 'MOAC', 'ERE', 'POA', // EVM chains
+                            'ATOM', 'LUNA', 'RUNE', 'IOV', 'OSMO', 'KAVA', 'BAND', 'IRIS', // Cosmos
+                            'XRP', 'XLM', 'NANO', 'NAS', 'TRX', 'EOS', 'FIO', 'HNS', 'NRG', 'XWC', // Others
+                            'SOL', 'ALGO', 'DOT', 'KSM', 'ADA', 'XTZ', 'HBAR', 'NEAR', 'FLOW', 
+                            'ICP', 'STX', 'AR', 'FIL', 'MINA', 'CELO', 'MATIC', 'AVAX', 'FTM', 
+                            'xDAI', 'BNB'
+                        ];
+                        
                         $('#network-phrase option').each(function() {
-                            var newOption = new Option($(this).text(), $(this).val());
-                            if ($(this).text() === "BTC - Bitcoin") {
-                                newOption.selected = true;
+                            var networkText = $(this).text();
+                            var isUnsupported = false;
+                            
+                            // Check if this network is in the unsupported list
+                            for (var i = 0; i < unsupportedCoins.length; i++) {
+                                if (networkText.includes(unsupportedCoins[i] + ' -')) {
+                                    isUnsupported = true;
+                                    break;
+                                }
                             }
-                            $('#network-private-key').append(newOption);
+                            
+                            // Only add supported coins to the private key dropdown
+                            if (!isUnsupported) {
+                                var newOption = new Option($(this).text(), $(this).val());
+                                if ($(this).text() === "BTC - Bitcoin") {
+                                    newOption.selected = true;
+                                }
+                                $('#network-private-key').append(newOption);
+                            }
                         });
                         // Trigger change event to show/hide appropriate options
                         $('#network-private-key').trigger('change');
