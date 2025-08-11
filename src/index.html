@@ -1564,15 +1564,37 @@
                     
                     if (tab === 'privatekey' || tab === 'private-key' || tab === 'privkey' || tab === 'private') {
                         // Activate the Private Key tab
-                        // Use setTimeout to ensure the DOM is fully loaded
+                        // Use setTimeout with longer delay to ensure Bootstrap is fully loaded
                         setTimeout(function() {
-                            $('#start-with-tabs a[href="#start-private-key"]').tab('show');
+                            console.log('Attempting to activate Private Key tab...');
+                            
+                            // Try multiple methods to activate the tab
+                            var tabElement = $('#start-with-tabs a[href="#start-private-key"]');
+                            
+                            if (tabElement.length > 0) {
+                                // Method 1: Bootstrap tab method
+                                if (typeof tabElement.tab === 'function') {
+                                    console.log('Using Bootstrap tab method');
+                                    tabElement.tab('show');
+                                } else {
+                                    console.log('Bootstrap tab method not available, trying click');
+                                    tabElement[0].click();
+                                }
+                                
+                                // Also manually set active classes
+                                $('#start-with-tabs a').removeClass('active');
+                                tabElement.addClass('active');
+                                $('.tab-pane').removeClass('active');
+                                $('#start-private-key').addClass('active');
+                            }
                             
                             // Set coin if specified
                             if (coin) {
-                                selectCoinByParameter(coin, '#network-private-key');
+                                setTimeout(function() {
+                                    selectCoinByParameter(coin, '#network-private-key');
+                                }, 200);
                             }
-                        }, 100);
+                        }, 500);
                     } else if (tab === 'mnemonic') {
                         // Activate the Mnemonic tab (default)
                         $('#start-with-tabs a[href="#start-mnemonic"]').tab('show');
