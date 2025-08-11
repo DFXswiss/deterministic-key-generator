@@ -1959,7 +1959,7 @@
                 }
                 
                 // Generate Ark Protocol VTXO address using the official SDK
-                function generateArkAddress(userPubkeyBuffer, serverPubkeyHex, exitDelay, network, networkName) {
+                async function generateArkAddress(userPubkeyBuffer, serverUrl, network, networkName) {
                     try {
                         // Check if SDK is available
                         if (typeof window.ArkSDK === 'undefined' || !window.ArkSDK.generateArkProtocolAddress) {
@@ -1973,11 +1973,10 @@
                         var networkType = (networkName && networkName.indexOf('Testnet') === -1 && 
                                           network === libs.bitcoin.networks.bitcoin) ? 'mainnet' : 'testnet';
                         
-                        // Use SDK to generate the address
-                        var result = window.ArkSDK.generateArkProtocolAddress(
+                        // Use SDK to generate the address with server URL
+                        var result = await window.ArkSDK.generateArkProtocolAddress(
                             userPubkeyHex,
-                            serverPubkeyHex,
-                            parseInt(exitDelay),
+                            serverUrl,
                             networkType
                         );
                         
@@ -1993,14 +1992,45 @@
                     } catch (error) {
                         console.error('Error in generateArkAddress:', error);
                         
-                        // Fallback to manual implementation if SDK fails
+                        // For manual fallback, try to get server pubkey and exit delay from input fields
+                        var serverPubkeyHex = $('#ark-server-pubkey').val() || '';
+                        var exitDelay = $('#ark-exit-delay').val() || '172544';
+                        
+                        if (!serverPubkeyHex) {
+                            return {
+                                success: false,
+                                error: 'Server URL required for Protocol address generation'
+                            };
+                        }
+                        
+                        // Fallback to manual implementation if we have the server pubkey
                         console.log('Falling back to manual implementation...');
                         return generateArkAddressManual(userPubkeyBuffer, serverPubkeyHex, exitDelay, network, networkName);
                     }
                 }
                 
-                // Manual fallback implementation (previous code)
+                // Manual fallback implementation using SDK manual method
                 function generateArkAddressManual(userPubkeyBuffer, serverPubkeyHex, exitDelay, network, networkName) {
+                    // If SDK is available, use its manual method
+                    if (typeof window.ArkSDK !== 'undefined' && window.ArkSDK.generateArkProtocolAddressManual) {
+                        var userPubkeyHex = bytesToHex(userPubkeyBuffer);
+                        var networkType = (networkName && networkName.indexOf('Testnet') === -1 && 
+                                          network === libs.bitcoin.networks.bitcoin) ? 'mainnet' : 'testnet';
+                        
+                        return window.ArkSDK.generateArkProtocolAddressManual(
+                            userPubkeyHex,
+                            serverPubkeyHex,
+                            parseInt(exitDelay),
+                            networkType
+                        );
+                    }
+                    
+                    // Otherwise use the old manual implementation
+                    return generateArkAddressManualOld(userPubkeyBuffer, serverPubkeyHex, exitDelay, network, networkName);
+                }
+                
+                // Old manual fallback implementation (previous code)
+                function generateArkAddressManualOld(userPubkeyBuffer, serverPubkeyHex, exitDelay, network, networkName) {
                     try {
                         var bitcoin = libs.bitcoin;
                         
@@ -2281,20 +2311,24 @@
                                 $('#ark-result-note').val('Generated using official arkade-os SDK');
                                 
                                 // Generate Ark Protocol VTXO address
-                                try {
-                                    var arkResult = generateArkAddress(userPubkey, serverPubkey, exitDelay, bitcoinNetwork, networkName);
-                                    if (typeof arkResult === 'object' && arkResult.address) {
+                                var serverUrl = $('#ark-server-url').val() || 'https://mutinynet.arkade.sh';
+                                generateArkAddress(userPubkey, serverUrl, bitcoinNetwork, networkName).then(function(arkResult) {
+                                    if (arkResult && typeof arkResult === 'object' && arkResult.address) {
                                         $('#ark-protocol-address').val(arkResult.address);
                                         $('#ark-result-vtxo-key').val(arkResult.vtxoKey);
+                                        $('#ark-server-pubkey').val(arkResult.serverPubKey);
+                                        $('#ark-exit-delay').val(arkResult.exitDelay || '');
                                         // Use protocol address as main address when server info available
                                         address = arkResult.address;
+                                    } else if (arkResult && arkResult.error) {
+                                        $('#ark-protocol-address').val('Error: ' + arkResult.error);
                                     } else {
                                         $('#ark-protocol-address').val(arkResult); // In case of error string
                                     }
-                                } catch (e) {
+                                }).catch(function(e) {
                                     console.error('Error generating Ark Protocol address:', e);
                                     $('#ark-protocol-address').val('Error: ' + e.message);
-                                }
+                                });
                             } else {
                                 // Show user pubkey but indicate server info is needed
                                 $('#ark-result-user-pubkey').val(pubkey);
