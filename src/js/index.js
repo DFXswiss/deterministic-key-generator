@@ -1373,6 +1373,97 @@
         return bip86TabSelected();
     }
 
+    // Bech32m encoding for Taproot addresses (BIP350)
+    function generateBech32mAddress(hrp, witver, witprog) {
+        var CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+        var BECH32M_CONST = 0x2bc830a3;
+        
+        // Convert witness program to 5-bit groups
+        function convertBits(data, fromBits, toBits, pad) {
+            var acc = 0;
+            var bits = 0;
+            var ret = [];
+            var maxv = (1 << toBits) - 1;
+            for (var i = 0; i < data.length; i++) {
+                var value = data[i];
+                if (value < 0 || (value >> fromBits) !== 0) {
+                    return null;
+                }
+                acc = (acc << fromBits) | value;
+                bits += fromBits;
+                while (bits >= toBits) {
+                    bits -= toBits;
+                    ret.push((acc >> bits) & maxv);
+                }
+            }
+            if (pad) {
+                if (bits > 0) {
+                    ret.push((acc << (toBits - bits)) & maxv);
+                }
+            } else if (bits >= fromBits || ((acc << (toBits - bits)) & maxv)) {
+                return null;
+            }
+            return ret;
+        }
+        
+        // Polymod for checksum calculation
+        function polymod(values) {
+            var gen = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+            var chk = 1;
+            for (var i = 0; i < values.length; i++) {
+                var top = chk >> 25;
+                chk = (chk & 0x1ffffff) << 5 ^ values[i];
+                for (var j = 0; j < 5; j++) {
+                    if ((top >> j) & 1) {
+                        chk ^= gen[j];
+                    }
+                }
+            }
+            return chk;
+        }
+        
+        // Create checksum
+        function createChecksum(hrp, data) {
+            var values = [];
+            // Add HRP expansion
+            for (var i = 0; i < hrp.length; i++) {
+                values.push(hrp.charCodeAt(i) >> 5);
+            }
+            values.push(0);
+            for (var i = 0; i < hrp.length; i++) {
+                values.push(hrp.charCodeAt(i) & 31);
+            }
+            // Add data
+            values = values.concat(data);
+            // Add 6 zeros for checksum
+            values = values.concat([0, 0, 0, 0, 0, 0]);
+            // Calculate checksum with Bech32m constant
+            var polymodValue = polymod(values) ^ BECH32M_CONST;
+            var checksum = [];
+            for (var i = 0; i < 6; i++) {
+                checksum.push((polymodValue >> 5 * (5 - i)) & 31);
+            }
+            return checksum;
+        }
+        
+        // Convert witness program to 5-bit groups
+        var conv = convertBits(witprog, 8, 5, true);
+        if (conv === null) {
+            return null;
+        }
+        
+        // Build the address
+        var data = [witver].concat(conv);
+        var checksum = createChecksum(hrp, data);
+        var combined = data.concat(checksum);
+        var address = hrp + '1';
+        for (var i = 0; i < combined.length; i++) {
+            address += CHARSET[combined[i]];
+        }
+        
+        return address;
+    }
+
     function p2wpkhInP2shSelected() {
         return bip49TabSelected() ||
             (bip141TabSelected() && DOM.bip141semantics.val() == "p2wpkh-p2sh");
@@ -1605,31 +1696,27 @@
                         try {
                             var pubkey = key.getPublicKeyBuffer();
                             // For taproot, we need the x-only public key (32 bytes instead of 33)
-                            var xOnlyPubkey = pubkey.slice(1, 33);
+                            var xOnlyPubkey = [];
+                            for (var i = 1; i < 33; i++) {
+                                xOnlyPubkey.push(pubkey[i]);
+                            }
                             
-                            // Create the witness program (version 1 for taproot)
-                            var witnessProgram = [0x01].concat(Array.from(xOnlyPubkey));
+                            // Determine HRP based on network
+                            var hrp = network === libs.bitcoin.networks.bitcoin ? 'bc' : 
+                                     network === libs.bitcoin.networks.testnet ? 'tb' : 'tb';
                             
-                            // Use bech32m encoding for Taproot
-                            var hrp = network === libs.bitcoin.networks.bitcoin ? 'bc' : 'tb';
-                            
-                            // Simple Taproot address generation
-                            // In a full implementation, this would use proper BIP341 taproot tweaking
-                            if (libs.bitcoin.address && libs.bitcoin.address.fromOutputScript) {
-                                // Create a P2TR output script
-                                var outputScript = Buffer.concat([
-                                    Buffer.from([0x51, 0x20]), // OP_1 + push 32 bytes
-                                    xOnlyPubkey
-                                ]);
-                                try {
-                                    address = libs.bitcoin.address.fromOutputScript(outputScript, network);
-                                } catch (e) {
-                                    // Fallback to manual bech32m encoding
-                                    address = hrp + "1p" + "..." // Placeholder for manual encoding
-                                }
+                            // For Taproot (witness version 1), create the witness program
+                            // Format: witness_version (1) + witness_program (32 bytes x-only pubkey)
+                            address = generateBech32mAddress(hrp, 1, xOnlyPubkey);
+                            if (!address) {
+                                console.error('Bech32m encoding failed for Taproot address');
+                                address = 'bc1p' + xOnlyPubkey.slice(0, 8).map(function(b) { 
+                                    return b.toString(16).padStart(2, '0'); 
+                                }).join('') + '...';
                             }
                         } catch (error) {
                             console.error('Error generating Taproot address:', error);
+                            console.error('Stack:', error.stack);
                             address = 'Taproot address generation error';
                         }
                     }

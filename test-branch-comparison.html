@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Branch Comparison Test</title>
+    <script src="src/js/jquery-3.2.1.min.js"></script>
+    <script src="src/js/bitcoinjs-3.3.2.min.js"></script>
+</head>
+<body>
+    <h1>Testing Address Generation</h1>
+    <div id="output"></div>
+    
+    <script>
+        // Test mnemonic
+        const testMnemonic = "oxygen lobster melody price ribbon home clip doll trigger glove silly market";
+        
+        function testAddressGeneration() {
+            // Load the main page in an iframe
+            const iframe = document.createElement('iframe');
+            iframe.src = '/src/index.html';
+            iframe.style.width = '100%';
+            iframe.style.height = '600px';
+            document.body.appendChild(iframe);
+            
+            iframe.onload = function() {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                const iframeWin = iframe.contentWindow;
+                
+                // Wait for the page to fully load
+                setTimeout(() => {
+                    // Enter mnemonic
+                    const phraseInput = iframeDoc.querySelector('#phrase');
+                    if (phraseInput) {
+                        phraseInput.value = testMnemonic;
+                        const event = new Event('input', { bubbles: true });
+                        phraseInput.dispatchEvent(event);
+                        
+                        // Wait for processing
+                        setTimeout(() => {
+                            // Get the first 5 addresses
+                            const rows = iframeDoc.querySelectorAll('#addresses tbody tr');
+                            let output = '<h2>Generated Addresses:</h2><pre>';
+                            
+                            for (let i = 0; i < Math.min(5, rows.length); i++) {
+                                const cells = rows[i].querySelectorAll('td');
+                                if (cells.length >= 4) {
+                                    output += `Path: ${cells[0].textContent}\n`;
+                                    output += `Address: ${cells[1].textContent}\n`;
+                                    output += `Public Key: ${cells[2].textContent}\n`;
+                                    output += `Private Key: ${cells[3].textContent}\n`;
+                                    output += '---\n';
+                                }
+                            }
+                            
+                            output += '</pre>';
+                            document.getElementById('output').innerHTML = output;
+                            
+                            // Also log network selection
+                            const networkSelect = iframeDoc.querySelector('.network');
+                            if (networkSelect) {
+                                const selectedOption = networkSelect.options[networkSelect.selectedIndex];
+                                output += `<p><strong>Selected Network:</strong> ${selectedOption.text}</p>`;
+                                output += `<p><strong>Derivation Path:</strong> ${iframeDoc.querySelector('#bip44-path').value}</p>`;
+                                document.getElementById('output').innerHTML = output;
+                            }
+                        }, 2000);
+                    }
+                }, 1000);
+            };
+        }
+        
+        // Run test when page loads
+        window.onload = testAddressGeneration;
+    </script>
+</body>
+</html>
