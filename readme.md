@@ -40,13 +40,25 @@ The BIP32 keys can be used at [bip32.org](https://bip32.org) if desired.
 
 ## Supported Cryptocurrencies
 
-The tool supports **200+ cryptocurrencies** including Bitcoin, Ethereum, and many altcoins. Below is the complete list organized by category:
+The tool supports **200+ cryptocurrencies** including Bitcoin, Ethereum, and many altcoins.
 
-### Bitcoin and Major Forks
+### Full Support (Mnemonic & Private Key)
+
+The following cryptocurrencies support both **BIP39 mnemonic phrases** and **private key import**:
+
+#### Bitcoin and Variants
 - **BTC** - Bitcoin
 - **BTC** - Bitcoin Testnet
 - **BTC** - Bitcoin RegTest
 - **BTC** - Bitcoin Ark Testnet
+- **LTC** - Litecoin
+- **LTCt** - Litecoin Testnet
+
+### Mnemonic Only Support
+
+The following cryptocurrencies support **BIP39 mnemonic phrases only** (no private key import):
+
+#### Bitcoin Forks
 - **BCH** - Bitcoin Cash
 - **BSV** - BitcoinSV
 - **BTG** - Bitcoin Gold
@@ -55,13 +67,11 @@ The tool supports **200+ cryptocurrencies** including Bitcoin, Ethereum, and man
 - **BTCZ** - Bitcoinz
 - **BCA** - Bitcoin Atom
 
-### Litecoin and Variants
-- **LTC** - Litecoin
-- **LTCt** - Litecoin Testnet
+#### Litecoin Variants
 - **LCC** - Litecoincash
 - **LTZ** - LitecoinZ
 
-### Privacy Coins
+#### Privacy Coins
 - **DASH** - Dash
 - **DASH** - Dash Testnet
 - **ZEC** - Zcash
@@ -77,7 +87,7 @@ The tool supports **200+ cryptocurrencies** including Bitcoin, Ethereum, and man
 - **PART** - Particl
 - **ANON** - ANON
 
-### Ethereum and EVM Chains
+#### Ethereum and EVM Chains
 - **ETH** - Ethereum
 - **ETC** - Ethereum Classic
 - **BSC** - Binance Smart Chain
@@ -93,7 +103,7 @@ The tool supports **200+ cryptocurrencies** including Bitcoin, Ethereum, and man
 - **ERE** - EtherCore
 - **POA** - Poa
 
-### Proof of Stake Coins
+#### Proof of Stake Coins
 - **ATOM** - Cosmos Hub
 - **LUNA** - Terra
 - **RUNE** - THORChain
@@ -105,7 +115,7 @@ The tool supports **200+ cryptocurrencies** including Bitcoin, Ethereum, and man
 - **TSTRAT** - Stratis Testnet
 - **NAV** - Navcoin
 
-### UTXO-based Altcoins
+#### UTXO-based Altcoins
 - **DOGE** - Dogecoin
 - **DOGEt** - Dogecoin Testnet
 - **DGB** - Digibyte
@@ -118,14 +128,14 @@ The tool supports **200+ cryptocurrencies** including Bitcoin, Ethereum, and man
 - **FTC** - Feathercoin
 - **RVN** - Ravencoin
 
-### Gaming and Entertainment
+#### Gaming and Entertainment
 - **GAME** - GameCredits
 - **WGR** - Wagerr
 - **CLUB** - Clubcoin
 - **FLASH** - Flashcoin
 - **BEET** - Beetlecoin
 
-### Regional Coins
+#### Regional Coins
 - **AUR** - Auroracoin (Iceland)
 - **NLG** - Gulden (Netherlands)
 - **EFL** - Egulden (Netherlands)
@@ -137,7 +147,7 @@ The tool supports **200+ cryptocurrencies** including Bitcoin, Ethereum, and man
 - **BOLI** - Bolivarcoin (Venezuela)
 - **SWTC** - Jingtum (China)
 
-### DeFi and Smart Contract Platforms
+#### DeFi and Smart Contract Platforms
 - **EOS** - EOSIO
 - **TRX** - Tron
 - **FIO** - Foundation for Interwallet Operability
@@ -147,7 +157,7 @@ The tool supports **200+ cryptocurrencies** including Bitcoin, Ethereum, and man
 - **HNS** - Handshake
 - **DXN** - DEXON
 
-### Specialized Protocols
+#### Specialized Protocols
 - **SLP** - Simple Ledger Protocol
 - **OMNI** - Omnicore
 - **R-BTC** - RSK
@@ -156,7 +166,7 @@ The tool supports **200+ cryptocurrencies** including Bitcoin, Ethereum, and man
 - **XLM** - Stellar
 - **NANO** - Nano
 
-### Mining-focused Coins
+#### Mining-focused Coins
 - **XMY** - Myriadcoin
 - **CPU** - CPUchain
 - **MEC** - Megacoin
@@ -164,7 +174,7 @@ The tool supports **200+ cryptocurrencies** including Bitcoin, Ethereum, and man
 - **DNR** - Denarius
 - **MNX** - Minexcoin
 
-### Community and Meme Coins
+#### Community and Meme Coins
 - **PINK** - Pinkcoin
 - **POT** - Potcoin
 - **THC** - Hempcoin
@@ -172,7 +182,7 @@ The tool supports **200+ cryptocurrencies** including Bitcoin, Ethereum, and man
 - **SMLY** - Smileycoin
 - **PUT** - Putincoin
 
-### Legacy and Historical Coins
+#### Legacy and Historical Coins
 - **NMC** - Namecoin
 - **IXC** - Ixcoin
 - **BLK** - BlackCoin
@@ -184,7 +194,7 @@ The tool supports **200+ cryptocurrencies** including Bitcoin, Ethereum, and man
 - **OK** - Okcash
 - **FRST** - Firstcoin
 
-### Other Notable Coins
+#### Other Notable Coins
 - **AC** - Asiacoin
 - **ACC** - Adcoin
 - **AGM** - Argoneum
