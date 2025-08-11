@@ -2,12 +2,13 @@ const path = require('path');
 const webpack = require('webpack');
 
 module.exports = {
-    entry: './src/js/ark-sdk-wrapper.js',
+    entry: './webpack-entry.js',
     output: {
         filename: 'ark-sdk-bundle.js',
         path: path.resolve(__dirname, 'src/js'),
         library: 'ArkSDK',
-        libraryTarget: 'window'
+        libraryTarget: 'umd',
+        globalObject: 'this'
     },
     mode: 'production',
     resolve: {

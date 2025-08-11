@@ -2,7 +2,7 @@
 <html>
     <head lang="en">
         <meta charset="utf-8" />
-        <title>BIP39 - Mnemonic Code</title>
+        <title>Deterministic Key Generator</title>
         <link rel="stylesheet" href="css/bootstrap.css">
         <link rel="stylesheet" href="css/app.css">
         <meta content="Mnemonic code for generating deterministic keys" name="description"/>
@@ -1513,6 +1513,7 @@
         <script src="js/bootstrap.js"></script>
         <script src="js/bip39-libs.js"></script>
     <script src="js/ark-sdk-bundle.js"></script>
+    <script src="js/ark-sdk-wrapper.js"></script>
         <script src="js/bitcoinjs-extensions.js"></script>
         <script src="js/segwit-parameters.js"></script>
         <script src="js/ripple-util.js"></script>
@@ -2156,6 +2157,7 @@
                         var bitcoinNetwork = (typeof network !== 'undefined' ? network : libs.bitcoin.networks.bitcoin);
                         
                         var networkName = networkConfig.name;
+                        console.log('Network name:', networkName); // Debug
                         
                         // Note: Additional params visibility is now handled by network selection change event
                         
@@ -2194,21 +2196,54 @@
                             if (hexKey.startsWith('nsec1')) {
                                 try {
                                     // Decode Nostr nsec (Bech32) to get the private key
-                                    // The bech32 library structure varies
-                                    var bech32lib = libs.bech32;
+                                    // Use inline bech32 decoding since the library may not be exposed
                                     
-                                    // Check which API is available
-                                    var decoded;
-                                    if (bech32lib.bech32 && bech32lib.bech32.decode) {
-                                        // Nested structure
-                                        decoded = bech32lib.bech32.decode(hexKey);
-                                        var bytes = bech32lib.bech32.fromWords(decoded.words);
-                                    } else if (bech32lib.decode) {
-                                        // Direct structure
-                                        decoded = bech32lib.decode(hexKey);
-                                        var bytes = bech32lib.fromWords(decoded.words);
-                                    } else {
-                                        throw new Error("Bech32 library not properly loaded");
+                                    // Bech32 character set
+                                    var CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+                                    var CHARSET_INVERSE = {};
+                                    for (var i = 0; i < CHARSET.length; i++) {
+                                        CHARSET_INVERSE[CHARSET[i]] = i;
+                                    }
+                                    
+                                    // Decode bech32 string
+                                    var lower = hexKey.toLowerCase();
+                                    var upper = hexKey.toUpperCase();
+                                    if (hexKey !== lower && hexKey !== upper) {
+                                        throw new Error('Mixed case nsec format');
+                                    }
+                                    hexKey = lower;
+                                    
+                                    var split = hexKey.lastIndexOf('1');
+                                    if (split === -1) throw new Error('No separator in nsec');
+                                    
+                                    var prefix = hexKey.slice(0, split);
+                                    if (prefix !== 'nsec') throw new Error('Invalid nsec prefix');
+                                    
+                                    var wordChars = hexKey.slice(split + 1);
+                                    if (wordChars.length < 6) throw new Error('Data too short');
+                                    
+                                    var words = [];
+                                    for (var i = 0; i < wordChars.length; i++) {
+                                        var c = wordChars[i];
+                                        if (!(c in CHARSET_INVERSE)) throw new Error('Unknown character: ' + c);
+                                        words.push(CHARSET_INVERSE[c]);
+                                    }
+                                    
+                                    // Remove checksum (last 6 characters)
+                                    words = words.slice(0, -6);
+                                    
+                                    // Convert from 5-bit words to 8-bit bytes
+                                    var bytes = [];
+                                    var accumulator = 0;
+                                    var bits = 0;
+                                    for (var i = 0; i < words.length; i++) {
+                                        var word = words[i];
+                                        accumulator = (accumulator << 5) | word;
+                                        bits += 5;
+                                        while (bits >= 8) {
+                                            bits -= 8;
+                                            bytes.push((accumulator >> bits) & 0xff);
+                                        }
                                     }
                                     
                                     // Convert bytes to hex
@@ -2219,9 +2254,8 @@
                                         hexKey += hex;
                                     }
                                 } catch (bech32Error) {
-                                    // Don't throw here, let it fall through to the general error
-                                    // This allows the error message to be more helpful
-                                    hexKey = privKeyInput; // Reset to original
+                                    console.error('Error decoding nsec:', bech32Error);
+                                    throw new Error('Invalid nsec format: ' + bech32Error.message);
                                 }
                             }
                             // Remove 0x prefix if present (common for Ethereum)
@@ -2273,20 +2307,66 @@
                         var wif = '';
                         
                         // Handle Bitcoin Ark Testnet specially
+                        console.log('Checking for Ark network. NetworkName:', networkName); // Debug
                         if (networkName === "BTC - Bitcoin Ark Testnet") {
+                            console.log('Ark network detected!'); // Debug
                             // For Ark, we need server info to generate special address
                             // Get user's public key
                             var userPubkey = keyPair.getPublicKeyBuffer();
                             pubkey = userPubkey.toString('hex');
                             wif = keyPair.toWIF();
                             
-                            // Get server params from form fields
+                            // Get server params from form fields (or fetch if not available)
+                            var serverUrl = $('#ark-server-url').val() || 'https://mutinynet.arkade.sh';
                             var serverPubkey = $('#ark-server-pubkey').val();
                             var exitDelay = $('#ark-exit-delay').val();
                             var arkNetwork = $('#ark-network').val();
                             
+                            // If server info not fetched, fetch it now
+                            if (!serverPubkey && serverUrl) {
+                                console.log('Auto-fetching server info from:', serverUrl);
+                                // Use the SDK wrapper to fetch server info
+                                if (window.ArkSDK && window.ArkSDK.fetchServerInfo) {
+                                    window.ArkSDK.fetchServerInfo(serverUrl).then(function(serverInfo) {
+                                        $('#ark-server-pubkey').val(serverInfo.signerPubkey || '');
+                                        $('#ark-exit-delay').val(serverInfo.unilateralExitDelay || '');
+                                        $('#ark-network').val(serverInfo.network || '');
+                                        console.log('Server info fetched successfully via SDK');
+                                        
+                                        // Generate addresses with fetched server info
+                                        generateArkAddressesWithServerInfo(userPubkey, pubkey, keyPair, serverInfo, networkName, bitcoinNetwork);
+                                    }).catch(function(error) {
+                                        console.error('Failed to fetch server info via SDK:', error);
+                                        // Continue without server info
+                                        generateArkAddressesWithServerInfo(userPubkey, pubkey, keyPair, null, networkName, bitcoinNetwork);
+                                    });
+                                    return; // Exit here, continue in callback
+                                } else {
+                                    console.error('ArkSDK.fetchServerInfo not available');
+                                }
+                            }
+                            
+                            // Generate addresses with current server info (if available)
+                            generateArkAddressesWithServerInfo(userPubkey, pubkey, keyPair, null, networkName, bitcoinNetwork);
+                        }
+                        
+                        // Helper function to generate Ark addresses with server info
+                        function generateArkAddressesWithServerInfo(userPubkey, pubkey, keyPair, serverInfo, networkName, bitcoinNetwork) {
+                            var address = '';
+                            var wif = '';
+                            
+                            // Get WIF from the original keyPair if available
+                            if (keyPair && typeof keyPair.toWIF === 'function') {
+                                wif = keyPair.toWIF();
+                            }
                             // Show Ark result fields
+                            console.log('Showing Ark result fields...'); // Debug
                             $('.ark-result-fields').removeClass('hidden');
+                            
+                            // Use serverInfo if provided, otherwise get from fields
+                            var serverPubkey = serverInfo ? serverInfo.signerPubkey : $('#ark-server-pubkey').val();
+                            var exitDelay = serverInfo ? serverInfo.unilateralExitDelay : $('#ark-exit-delay').val();
+                            var arkNetwork = serverInfo ? serverInfo.network : $('#ark-network').val();
                             
                             // Always generate standard Ark address
                             try {
@@ -2305,30 +2385,55 @@
                                 // Populate individual Ark result fields
                                 $('#ark-result-user-pubkey').val(pubkey);
                                 $('#ark-result-server-pubkey').val(serverPubkey);
-                                $('#ark-result-exit-delay').val(exitDelay + ' blocks');
+                                $('#ark-result-exit-delay').val(exitDelay + (exitDelay > 512 ? ' seconds' : ' blocks'));
                                 $('#ark-result-network').val(arkNetwork);
                                 $('#ark-result-script').val('A + S | A after T');
                                 $('#ark-result-note').val('Generated using official arkade-os SDK');
                                 
-                                // Generate Ark Protocol VTXO address
-                                var serverUrl = $('#ark-server-url').val() || 'https://mutinynet.arkade.sh';
-                                generateArkAddress(userPubkey, serverUrl, bitcoinNetwork, networkName).then(function(arkResult) {
-                                    if (arkResult && typeof arkResult === 'object' && arkResult.address) {
-                                        $('#ark-protocol-address').val(arkResult.address);
-                                        $('#ark-result-vtxo-key').val(arkResult.vtxoKey);
-                                        $('#ark-server-pubkey').val(arkResult.serverPubKey);
-                                        $('#ark-exit-delay').val(arkResult.exitDelay || '');
-                                        // Use protocol address as main address when server info available
-                                        address = arkResult.address;
-                                    } else if (arkResult && arkResult.error) {
-                                        $('#ark-protocol-address').val('Error: ' + arkResult.error);
+                                // Generate Ark Protocol VTXO address using SDK manual method
+                                try {
+                                    // Use the SDK manual method with the fetched server info
+                                    if (window.ArkSDK && window.ArkSDK.generateArkProtocolAddressManual) {
+                                        var userPubkeyHex = bytesToHex(userPubkey);
+                                        var networkType = (networkName && networkName.indexOf('Testnet') === -1) ? 'mainnet' : 'testnet';
+                                        
+                                        var arkResult = window.ArkSDK.generateArkProtocolAddressManual(
+                                            userPubkeyHex,
+                                            serverPubkey,
+                                            parseInt(exitDelay),
+                                            networkType
+                                        );
+                                        
+                                        if (arkResult && arkResult.success) {
+                                            $('#ark-protocol-address').val(arkResult.address);
+                                            $('#ark-result-vtxo-key').val(arkResult.vtxoKey);
+                                            // Use protocol address as main address when server info available
+                                            address = arkResult.address;
+                                        } else if (arkResult && arkResult.error) {
+                                            $('#ark-protocol-address').val('Error: ' + arkResult.error);
+                                        }
                                     } else {
-                                        $('#ark-protocol-address').val(arkResult); // In case of error string
+                                        // Fallback to async method if manual not available
+                                        var serverUrl = $('#ark-server-url').val() || 'https://mutinynet.arkade.sh';
+                                        generateArkAddress(userPubkey, serverUrl, bitcoinNetwork, networkName).then(function(arkResult) {
+                                            if (arkResult && typeof arkResult === 'object' && arkResult.address) {
+                                                $('#ark-protocol-address').val(arkResult.address);
+                                                $('#ark-result-vtxo-key').val(arkResult.vtxoKey);
+                                                $('#ark-server-pubkey').val(arkResult.serverPubKey);
+                                                $('#ark-exit-delay').val(arkResult.exitDelay || '');
+                                                address = arkResult.address;
+                                            } else if (arkResult && arkResult.error) {
+                                                $('#ark-protocol-address').val('Error: ' + arkResult.error);
+                                            }
+                                        }).catch(function(e) {
+                                            console.error('Error generating Ark Protocol address:', e);
+                                            $('#ark-protocol-address').val('Error: ' + e.message);
+                                        });
                                     }
-                                }).catch(function(e) {
+                                } catch (e) {
                                     console.error('Error generating Ark Protocol address:', e);
                                     $('#ark-protocol-address').val('Error: ' + e.message);
-                                });
+                                }
                             } else {
                                 // Show user pubkey but indicate server info is needed
                                 $('#ark-result-user-pubkey').val(pubkey);
@@ -2350,7 +2455,7 @@
                         }
                         // Only support Bitcoin and Bitcoin-like coins that use standard WIF format
                         // Unsupported: Ethereum, EVM chains, Cosmos, XRP, and other special formats
-                        else if (networkName.includes("ETH") || networkName.includes("BNB") || networkName.includes("MATIC") || 
+                        if (networkName.includes("ETH") || networkName.includes("BNB") || networkName.includes("MATIC") || 
                             networkName.includes("AVAX") || networkName.includes("FTM") || networkName.includes("xDAI") ||
                             networkName.includes("ATOM") || networkName.includes("LUNA") || networkName.includes("OSMO") ||
                             networkName.includes("XRP") || networkName.includes("XLM") || networkName.includes("NANO") ||
