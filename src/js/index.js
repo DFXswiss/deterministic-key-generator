@@ -1373,6 +1373,113 @@
         return bip86TabSelected();
     }
 
+    // Tagged hash function for BIP341
+    function taggedHash(tag, data) {
+        // Create SHA256 hash of the tag as a buffer
+        var tagBuffer = [];
+        for (var i = 0; i < tag.length; i++) {
+            tagBuffer.push(tag.charCodeAt(i));
+        }
+        var tagHash = libs.bitcoin.crypto.sha256(tagBuffer);
+        
+        // Concatenate: tagHash || tagHash || data
+        var preimage = [];
+        for (var i = 0; i < tagHash.length; i++) {
+            preimage.push(tagHash[i]);
+        }
+        for (var i = 0; i < tagHash.length; i++) {
+            preimage.push(tagHash[i]);
+        }
+        for (var i = 0; i < data.length; i++) {
+            preimage.push(data[i]);
+        }
+        
+        // Return SHA256 of the preimage
+        return libs.bitcoin.crypto.sha256(preimage);
+    }
+    
+    // Apply Taproot tweak to x-only public key (BIP341)
+    function applyTaprootTweak(xOnlyPubkey) {
+        try {
+            // Get a dummy ECPair to access the curve
+            var dummyKey = libs.bitcoin.ECPair.makeRandom();
+            var curve = dummyKey.Q.curve;
+            var BigIntClass = dummyKey.d.constructor;
+            
+            // Convert x-only pubkey to BigInteger
+            var x = BigIntClass.fromByteArrayUnsigned(xOnlyPubkey);
+            
+            // Constants
+            var p = curve.p;
+            var n = curve.n;
+            var G = curve.G;
+            var seven = new BigIntClass('7');
+            var three = new BigIntClass('3');
+            var one = BigIntClass.ONE;
+            var four = new BigIntClass('4');
+            var two = new BigIntClass('2');
+            var zero = BigIntClass.ZERO;
+            
+            // Lift x to point (compute y from x)
+            // y^2 = x^3 + 7 (mod p)
+            var x3 = x.modPow(three, p);
+            var ySquared = x3.add(seven).mod(p);
+            
+            // Compute y = ySquared^((p+1)/4) mod p
+            var exponent = p.add(one).divide(four);
+            var y = ySquared.modPow(exponent, p);
+            
+            // Verify that y^2 = x^3 + 7
+            var ySquaredCheck = y.modPow(two, p);
+            if (ySquaredCheck.compareTo(ySquared) !== 0) {
+                throw new Error('Invalid point: y^2 != x^3 + 7');
+            }
+            
+            // Ensure y is even (BIP340/341 convention)
+            if (y.mod(two).compareTo(zero) !== 0) {
+                y = p.subtract(y);
+            }
+            
+            // Create the internal pubkey point P
+            // In bitcoinjs-lib v3, we need to use the Point constructor with z=1 for affine points
+            var Point = dummyKey.Q.constructor;
+            var P = new Point(curve, x, y, one);
+            
+            // For BIP86 (key-path spending), we tweak with empty script tree
+            // tweak = hashTapTweak(bytes(P))
+            var tweakHash = taggedHash('TapTweak', xOnlyPubkey);
+            var tweakInt = BigIntClass.fromByteArrayUnsigned(tweakHash);
+            
+            // Ensure tweak is within valid range
+            tweakInt = tweakInt.mod(n);
+            
+            // Calculate Q = P + tweak*G
+            var tweakPoint = G.multiply(tweakInt);
+            var Q = P.add(tweakPoint);
+            
+            // Return x-coordinate of Q as 32 bytes
+            var QxBigInt = Q.affineX;
+            var QxBytes = [];
+            
+            // Convert BigInteger to bytes manually to ensure unsigned
+            var hex = QxBigInt.toString(16);
+            // Pad to 64 hex chars (32 bytes)
+            while (hex.length < 64) {
+                hex = '0' + hex;
+            }
+            
+            // Convert hex to byte array
+            for (var i = 0; i < hex.length; i += 2) {
+                QxBytes.push(parseInt(hex.substr(i, 2), 16));
+            }
+            
+            return QxBytes;
+        } catch (e) {
+            console.error('Taproot tweak error:', e);
+            throw e;
+        }
+    }
+
     // Bech32m encoding for Taproot addresses (BIP350)
     function generateBech32mAddress(hrp, witver, witprog) {
         var CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
@@ -1701,13 +1808,16 @@
                                 xOnlyPubkey.push(pubkeyBuffer[i]);
                             }
                             
+                            // Apply BIP341 Taproot tweaking for BIP86 (key-path spending)
+                            var tweakedPubkey = applyTaprootTweak(xOnlyPubkey);
+                            
                             // Determine HRP based on network
                             var hrp = network === libs.bitcoin.networks.bitcoin ? 'bc' : 
                                      network === libs.bitcoin.networks.testnet ? 'tb' : 'tb';
                             
                             // For Taproot (witness version 1), create the witness program
-                            // Format: witness_version (1) + witness_program (32 bytes x-only pubkey)
-                            address = generateBech32mAddress(hrp, 1, xOnlyPubkey);
+                            // Format: witness_version (1) + witness_program (32 bytes tweaked pubkey)
+                            address = generateBech32mAddress(hrp, 1, tweakedPubkey);
                             if (!address) {
                                 console.error('Bech32m encoding failed for Taproot address');
                                 address = 'bc1p' + xOnlyPubkey.slice(0, 8).map(function(b) { 
