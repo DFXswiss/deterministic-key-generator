@@ -25,7 +25,9 @@ let testResults = {
 // Simple HTTP GET request
 function httpGet(url) {
     return new Promise((resolve, reject) => {
-        http.get(url, (res) => {
+        // Replace localhost with 127.0.0.1 to avoid IPv6 issues
+        const fixedUrl = url.replace('localhost', '127.0.0.1');
+        http.get(fixedUrl, (res) => {
             let data = '';
             res.on('data', chunk => data += chunk);
             res.on('end', () => resolve({ status: res.statusCode, body: data }));
@@ -234,11 +236,11 @@ async function runTests() {
     
     // Try to test with server if available
     try {
-        // Start a simple HTTP server
+        // Start a simple HTTP server binding to 127.0.0.1
         console.log(`\nStarting HTTP server on port ${PORT}...`);
         const serverProcess = require('child_process').spawn('python3', 
-            ['-m', 'http.server', PORT], 
-            { cwd: path.join(__dirname, '..'), detached: true }
+            ['-m', 'http.server', PORT, '--bind', '127.0.0.1'], 
+            { cwd: path.join(__dirname, '..'), detached: true, stdio: 'ignore' }
         );
         
         // Wait for server to start
