@@ -1,0 +1,71 @@
+name: Test Deterministic Key Generator
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+
+jobs:
+  simple-test:
+    runs-on: ubuntu-latest
+    name: Simple Tests
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Run simple tests
+      run: |
+        chmod +x test/test-simple.js
+        node test/test-simple.js
+    
+    - name: Run mnemonic tests
+      run: |
+        chmod +x test/test-mnemonic.js
+        node test/test-mnemonic.js
+    
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: simple-test-results
+        path: |
+          test-results/simple-test-report.json
+          test-results/mnemonic-test-report.json
+
+  browser-test:
+    runs-on: ubuntu-latest
+    name: Browser Tests
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: |
+        npm install
+    
+    - name: Start HTTP server
+      run: |
+        npx http-server -p 8080 &
+        sleep 5
+    
+    - name: Run browser tests
+      run: |
+        npm test
+    
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: browser-test-results
+        path: test-results/test-report.json

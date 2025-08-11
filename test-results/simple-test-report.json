@@ -1,0 +1,22 @@
+{
+  "summary": {
+    "total": 104,
+    "passed": 101,
+    "failed": 3,
+    "timestamp": "2025-08-11T06:14:02.454Z"
+  },
+  "errors": [
+    {
+      "test": "File Structure",
+      "error": "src/js/bitcoinjs-3.3.2.min.js not found"
+    },
+    {
+      "test": "File Structure",
+      "error": "src/js/jquery-3.2.1.min.js not found"
+    },
+    {
+      "test": "HTML Structure",
+      "error": "Private Key tab missing"
+    }
+  ]
+}

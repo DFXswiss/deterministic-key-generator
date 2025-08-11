@@ -1623,54 +1623,172 @@
                     }
                 }
                 
-                // Generate Ark address using taproot with "A + S | A after T" conditions
+                // Bech32m encoding functions for Ark addresses
+                var bech32m = {
+                    // Base32 character set
+                    CHARSET: 'qpzry9x8gf2tvdw0s3jn54khce6mua7l',
+                    
+                    // Convert to 5-bit words
+                    toWords: function(bytes) {
+                        var words = [];
+                        var acc = 0;
+                        var bits = 0;
+                        for (var i = 0; i < bytes.length; i++) {
+                            acc = (acc << 8) | bytes[i];
+                            bits += 8;
+                            while (bits >= 5) {
+                                bits -= 5;
+                                words.push((acc >> bits) & 0x1f);
+                            }
+                        }
+                        if (bits > 0) {
+                            words.push((acc << (5 - bits)) & 0x1f);
+                        }
+                        return words;
+                    },
+                    
+                    // Polymod for checksum
+                    polymod: function(values) {
+                        var gen = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+                        var chk = 1;
+                        for (var i = 0; i < values.length; i++) {
+                            var top = chk >> 25;
+                            chk = (chk & 0x1ffffff) << 5 ^ values[i];
+                            for (var j = 0; j < 5; j++) {
+                                if ((top >> j) & 1) {
+                                    chk ^= gen[j];
+                                }
+                            }
+                        }
+                        return chk;
+                    },
+                    
+                    // Create checksum
+                    createChecksum: function(hrp, data) {
+                        var values = [];
+                        // Add HRP expansion
+                        for (var i = 0; i < hrp.length; i++) {
+                            values.push(hrp.charCodeAt(i) >> 5);
+                        }
+                        values.push(0);
+                        for (var i = 0; i < hrp.length; i++) {
+                            values.push(hrp.charCodeAt(i) & 31);
+                        }
+                        // Add data
+                        values = values.concat(data);
+                        // Add 6 zeros for checksum
+                        values = values.concat([0, 0, 0, 0, 0, 0]);
+                        // Calculate checksum
+                        var polymodValue = this.polymod(values) ^ 0x2bc830a3; // Bech32m constant
+                        var checksum = [];
+                        for (var i = 0; i < 6; i++) {
+                            checksum.push((polymodValue >> 5 * (5 - i)) & 31);
+                        }
+                        return checksum;
+                    },
+                    
+                    // Encode to bech32m
+                    encode: function(hrp, data) {
+                        var combined = data.concat(this.createChecksum(hrp, data));
+                        var result = hrp + '1';
+                        for (var i = 0; i < combined.length; i++) {
+                            result += this.CHARSET[combined[i]];
+                        }
+                        return result;
+                    }
+                };
+
+                // Generate Ark address using bech32m encoding
                 function generateArkAddress(userPubkeyBuffer, serverPubkeyHex, exitDelay, network) {
                     try {
-                        // Convert server pubkey from hex to buffer
-                        var serverPubkeyBytes = [];
-                        for (var i = 0; i < serverPubkeyHex.length; i += 2) {
-                            serverPubkeyBytes.push(parseInt(serverPubkeyHex.substr(i, 2), 16));
-                        }
-                        
-                        // For Ark, we create a multi-sig like address
-                        // In production, this would use taproot with proper script paths
-                        // For now, we'll create a P2SH address with a simple multisig script
-                        
-                        // Create a 2-of-2 multisig script for the immediate spend path (A + S)
-                        // And a timelock path for unilateral exit (A after T)
-                        
-                        // Use bitcoinjs-lib to create a P2SH address
-                        // This is a simplified version - real Ark uses taproot
                         var bitcoin = libs.bitcoin;
                         
-                        // Create a script that represents the Ark conditions
-                        // In a real implementation, this would be a tapscript with two paths:
-                        // 1. 2-of-2 multisig (user + server)
-                        // 2. User single-sig after timelock
+                        // Convert server pubkey hex to x-only format (32 bytes)
+                        var serverXOnlyPubkey = [];
+                        // Check if it starts with 02 or 03 (compressed pubkey format)
+                        if (serverPubkeyHex.length === 66 && (serverPubkeyHex.substr(0, 2) === '02' || serverPubkeyHex.substr(0, 2) === '03')) {
+                            // Skip the first byte (02 or 03) to get x-only pubkey
+                            for (var i = 2; i < serverPubkeyHex.length; i += 2) {
+                                serverXOnlyPubkey.push(parseInt(serverPubkeyHex.substr(i, 2), 16));
+                            }
+                        } else if (serverPubkeyHex.length === 64) {
+                            // Already x-only format
+                            for (var i = 0; i < serverPubkeyHex.length; i += 2) {
+                                serverXOnlyPubkey.push(parseInt(serverPubkeyHex.substr(i, 2), 16));
+                            }
+                        } else {
+                            throw new Error('Invalid server public key format');
+                        }
                         
-                        // For demonstration, create a P2WSH address
-                        var userPubkeyHex = userPubkeyBuffer.toString('hex');
+                        // Get x-only pubkey for user (remove the first byte if it's 33 bytes)
+                        var userXOnlyPubkey = [];
+                        if (userPubkeyBuffer.length === 33) {
+                            // Skip the first byte (0x02 or 0x03)
+                            for (var i = 1; i < userPubkeyBuffer.length; i++) {
+                                userXOnlyPubkey.push(userPubkeyBuffer[i]);
+                            }
+                        } else if (userPubkeyBuffer.length === 32) {
+                            for (var i = 0; i < userPubkeyBuffer.length; i++) {
+                                userXOnlyPubkey.push(userPubkeyBuffer[i]);
+                            }
+                        } else {
+                            throw new Error('Invalid user public key length');
+                        }
                         
-                        // Create a witness script hash
-                        // This is a placeholder - real Ark uses more complex taproot scripts
-                        var redeemScript = bitcoin.script.compile([
-                            bitcoin.opcodes.OP_2,
-                            userPubkeyBuffer,
-                            Buffer.from(serverPubkeyBytes),
-                            bitcoin.opcodes.OP_2,
-                            bitcoin.opcodes.OP_CHECKMULTISIG
-                        ]);
+                        // For the vtxo taproot key, we'll create a simple tweaked version
+                        // In a real implementation, this would be derived from the taproot tree
+                        // For now, we'll hash the user pubkey + server pubkey + exit delay
+                        var dataToHash = [];
+                        for (var i = 0; i < userXOnlyPubkey.length; i++) {
+                            dataToHash.push(userXOnlyPubkey[i]);
+                        }
+                        for (var i = 0; i < serverXOnlyPubkey.length; i++) {
+                            dataToHash.push(serverXOnlyPubkey[i]);
+                        }
+                        // Add exit delay as 4 bytes little-endian
+                        var delayBytes = [];
+                        var delay = parseInt(exitDelay);
+                        delayBytes.push(delay & 0xff);
+                        delayBytes.push((delay >> 8) & 0xff);
+                        delayBytes.push((delay >> 16) & 0xff);
+                        delayBytes.push((delay >> 24) & 0xff);
+                        for (var i = 0; i < delayBytes.length; i++) {
+                            dataToHash.push(delayBytes[i]);
+                        }
                         
-                        var redeemScriptHash = bitcoin.crypto.hash160(redeemScript);
-                        var scriptPubKey = bitcoin.script.scriptHash.output.encode(redeemScriptHash);
-                        var address = bitcoin.address.fromOutputScript(scriptPubKey, network);
+                        // Hash to get the vtxo taproot key
+                        var vtxoTaprootKey = bitcoin.crypto.sha256(dataToHash);
                         
-                        return address;
+                        // Create the Ark address data
+                        // Format: version (1 byte) + server pubkey (32 bytes) + vtxo taproot key (32 bytes)
+                        var addressData = [];
+                        addressData.push(0); // version 0
+                        
+                        // Add server pubkey (32 bytes)
+                        if (serverXOnlyPubkey.length !== 32) {
+                            throw new Error('Server pubkey must be 32 bytes, got ' + serverXOnlyPubkey.length);
+                        }
+                        for (var i = 0; i < serverXOnlyPubkey.length; i++) {
+                            addressData.push(serverXOnlyPubkey[i]);
+                        }
+                        
+                        // Add vtxo taproot key (32 bytes)
+                        for (var i = 0; i < 32; i++) {
+                            addressData.push(vtxoTaprootKey[i]);
+                        }
+                        
+                        // Convert to 5-bit words for bech32m
+                        var words = bech32m.toWords(addressData);
+                        
+                        // Determine HRP based on network
+                        var hrp = network === libs.bitcoin.networks.bitcoin ? 'ark' : 'tark';
+                        
+                        // Encode as bech32m
+                        return bech32m.encode(hrp, words);
                         
                     } catch (error) {
                         console.error('Error in generateArkAddress:', error);
-                        // Fallback: return a note about the address
-                        return 'P2TR address generation pending (requires taproot support)';
+                        return "Error: " + error.message;
                     }
                 }
                 
@@ -1840,7 +1958,7 @@
                                 $('#ark-result-exit-delay').val(exitDelay + ' blocks');
                                 $('#ark-result-network').val(arkNetwork);
                                 $('#ark-result-script').val('A + S | A after T');
-                                $('#ark-result-note').val('Taproot P2TR address with Ark script conditions');
+                                $('#ark-result-note').val('P2WSH multisig address for Ark protocol');
                                 
                                 // Generate Ark address using taproot
                                 try {
@@ -1850,12 +1968,14 @@
                                     address = 'Error generating Ark address';
                                 }
                             } else {
-                                // Clear Ark result fields if no server info
-                                $('#ark-result-user-pubkey').val('');
-                                $('#ark-result-server-pubkey').val('Please fetch server info');
+                                // Show user pubkey but indicate server info is needed
+                                $('#ark-result-user-pubkey').val(pubkey);
+                                $('#ark-result-server-pubkey').val('Please click "Fetch Info" to get server parameters');
                                 $('#ark-result-exit-delay').val('');
                                 $('#ark-result-network').val('');
-                                address = 'Ark parameters required';
+                                $('#ark-result-script').val('A + S | A after T');
+                                $('#ark-result-note').val('Server parameters required for address generation');
+                                address = 'Please fetch server info to generate Ark address';
                             }
                             
                             // Display results

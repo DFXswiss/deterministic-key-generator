@@ -1,0 +1,32 @@
+{
+  "name": "deterministic-key-generator",
+  "version": "1.0.0",
+  "description": "Deterministic cryptocurrency key generator with Ark protocol support",
+  "main": "src/index.html",
+  "scripts": {
+    "test": "node test/test-runner.js",
+    "test:simple": "node test/test-simple.js",
+    "test:mnemonic": "node test/test-mnemonic.js",
+    "test:all": "npm run test:simple && npm run test:mnemonic && npm test",
+    "test:local": "http-server -p 8080 & sleep 3 && npm test",
+    "serve": "http-server -p 8080"
+  },
+  "devDependencies": {
+    "puppeteer": "^21.0.0",
+    "http-server": "^14.1.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DFXswiss/deterministic-key-generator.git"
+  },
+  "keywords": [
+    "bitcoin",
+    "cryptocurrency",
+    "wallet",
+    "ark",
+    "taproot",
+    "bip39"
+  ],
+  "author": "DFX",
+  "license": "MIT"
+}

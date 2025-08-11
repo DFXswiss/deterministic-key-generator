@@ -1,0 +1,11 @@
+{
+  "summary": {
+    "total": 85,
+    "passed": 85,
+    "failed": 0,
+    "timestamp": "2025-08-11T06:23:03.570Z"
+  },
+  "testMnemonic": "oxygen lobster melody price ribbon home clip doll trigger glove silly market",
+  "expectedAddressCount": 20,
+  "errors": []
+}

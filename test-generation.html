@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Ark Generation</title>
+    <script src="src/js/bitcoinjs-3.3.2.min.js"></script>
+    <script src="src/js/jquery-3.2.1.min.js"></script>
+    <script>
+        // Copy the bech32m implementation from index.html
+        var bech32m = {
+            CHARSET: 'qpzry9x8gf2tvdw0s3jn54khce6mua7l',
+            
+            toWords: function(bytes) {
+                var words = [];
+                var acc = 0;
+                var bits = 0;
+                for (var i = 0; i < bytes.length; i++) {
+                    acc = (acc << 8) | bytes[i];
+                    bits += 8;
+                    while (bits >= 5) {
+                        bits -= 5;
+                        words.push((acc >> bits) & 0x1f);
+                    }
+                }
+                if (bits > 0) {
+                    words.push((acc << (5 - bits)) & 0x1f);
+                }
+                return words;
+            },
+            
+            polymod: function(values) {
+                var gen = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+                var chk = 1;
+                for (var i = 0; i < values.length; i++) {
+                    var top = chk >> 25;
+                    chk = (chk & 0x1ffffff) << 5 ^ values[i];
+                    for (var j = 0; j < 5; j++) {
+                        if ((top >> j) & 1) {
+                            chk ^= gen[j];
+                        }
+                    }
+                }
+                return chk;
+            },
+            
+            createChecksum: function(hrp, data) {
+                var values = [];
+                for (var i = 0; i < hrp.length; i++) {
+                    values.push(hrp.charCodeAt(i) >> 5);
+                }
+                values.push(0);
+                for (var i = 0; i < hrp.length; i++) {
+                    values.push(hrp.charCodeAt(i) & 31);
+                }
+                values = values.concat(data);
+                values = values.concat([0, 0, 0, 0, 0, 0]);
+                var polymodValue = this.polymod(values) ^ 0x2bc830a3;
+                var checksum = [];
+                for (var i = 0; i < 6; i++) {
+                    checksum.push((polymodValue >> 5 * (5 - i)) & 31);
+                }
+                return checksum;
+            },
+            
+            encode: function(hrp, data) {
+                var combined = data.concat(this.createChecksum(hrp, data));
+                var result = hrp + '1';
+                for (var i = 0; i < combined.length; i++) {
+                    result += this.CHARSET[combined[i]];
+                }
+                return result;
+            }
+        };
+
+        function testGeneration() {
+            var output = document.getElementById('output');
+            var html = '<h3>Test Results:</h3>';
+            
+            try {
+                var bitcoin = bitcoinjs.bitcoin;
+                var Buffer = bitcoin.Buffer || bitcoinjs.Buffer;
+                
+                // Test private key (all zeros for testing)
+                var privKeyHex = '0000000000000000000000000000000000000000000000000000000000000001';
+                var keyPair = bitcoin.ECPair.fromPrivateKey(Buffer.from(privKeyHex, 'hex'), { network: bitcoin.networks.testnet });
+                var userPubkeyBuffer = keyPair.publicKey;
+                
+                // Test server pubkey
+                var serverPubkeyHex = '02e7ab2537b5d49e970309aae06e9e49c36ce1c9febbd44ec8e0d1cca0b4f9c319';
+                var serverPubkey = [];
+                for (var i = 2; i < serverPubkeyHex.length; i += 2) { // Skip the 02 prefix
+                    serverPubkey.push(parseInt(serverPubkeyHex.substr(i, 2), 16));
+                }
+                
+                // Test exit delay
+                var exitDelay = 144;
+                
+                html += '<p><strong>Input Private Key:</strong> ' + privKeyHex + '</p>';
+                html += '<p><strong>User Public Key:</strong> ' + userPubkeyBuffer.toString('hex') + '</p>';
+                html += '<p><strong>Server Public Key:</strong> ' + serverPubkeyHex + '</p>';
+                html += '<p><strong>Exit Delay:</strong> ' + exitDelay + '</p>';
+                
+                // Get x-only pubkey
+                var userXOnlyPubkey = [];
+                for (var i = 1; i < userPubkeyBuffer.length; i++) {
+                    userXOnlyPubkey.push(userPubkeyBuffer[i]);
+                }
+                
+                // Create hash for vtxo taproot key
+                var dataToHash = [];
+                for (var i = 0; i < userXOnlyPubkey.length; i++) {
+                    dataToHash.push(userXOnlyPubkey[i]);
+                }
+                for (var i = 0; i < serverPubkey.length; i++) {
+                    dataToHash.push(serverPubkey[i]);
+                }
+                var delayBytes = [];
+                delayBytes.push(exitDelay & 0xff);
+                delayBytes.push((exitDelay >> 8) & 0xff);
+                delayBytes.push((exitDelay >> 16) & 0xff);
+                delayBytes.push((exitDelay >> 24) & 0xff);
+                for (var i = 0; i < delayBytes.length; i++) {
+                    dataToHash.push(delayBytes[i]);
+                }
+                
+                var vtxoTaprootKey = bitcoin.crypto.sha256(Buffer.from(dataToHash));
+                
+                html += '<p><strong>VTXO Taproot Key:</strong> ' + vtxoTaprootKey.toString('hex') + '</p>';
+                
+                // Create address data
+                var addressData = [];
+                addressData.push(0); // version
+                for (var i = 0; i < serverPubkey.length; i++) {
+                    addressData.push(serverPubkey[i]);
+                }
+                for (var i = 0; i < 32; i++) {
+                    addressData.push(vtxoTaprootKey[i]);
+                }
+                
+                html += '<p><strong>Address Data Length:</strong> ' + addressData.length + ' bytes (should be 65)</p>';
+                
+                // Convert to words and encode
+                var words = bech32m.toWords(addressData);
+                var address = bech32m.encode('tark', words);
+                
+                html += '<p><strong>Generated Ark Address:</strong></p>';
+                html += '<p style="word-break: break-all; background: #f0f0f0; padding: 10px;">' + address + '</p>';
+                html += '<p style="color: green"><strong>✓ Address generated successfully!</strong></p>';
+                
+            } catch (e) {
+                html += '<p style="color: red">Error: ' + e.message + '</p>';
+                html += '<pre>' + e.stack + '</pre>';
+            }
+            
+            output.innerHTML = html;
+        }
+        
+        window.onload = function() {
+            testGeneration();
+        };
+    </script>
+</head>
+<body>
+    <h1>Test Ark Address Generation</h1>
+    <div id="output"></div>
+</body>
+</html>
