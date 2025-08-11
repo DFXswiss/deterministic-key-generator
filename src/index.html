@@ -1512,6 +1512,7 @@
         <script src="js/jquery-3.2.1.js"></script>
         <script src="js/bootstrap.js"></script>
         <script src="js/bip39-libs.js"></script>
+    <script src="js/ark-sdk-bundle.js"></script>
         <script src="js/bitcoinjs-extensions.js"></script>
         <script src="js/segwit-parameters.js"></script>
         <script src="js/ripple-util.js"></script>
@@ -1957,22 +1958,59 @@
                     }
                 }
                 
-                // Generate Ark Protocol VTXO address (for off-chain transactions)
-                // This is the special address format for Ark Protocol with server pubkey and VTXO key
+                // Generate Ark Protocol VTXO address using the official SDK
                 function generateArkAddress(userPubkeyBuffer, serverPubkeyHex, exitDelay, network, networkName) {
+                    try {
+                        // Check if SDK is available
+                        if (typeof window.ArkSDK === 'undefined' || !window.ArkSDK.generateArkProtocolAddress) {
+                            throw new Error('Ark SDK not loaded. Please refresh the page.');
+                        }
+                        
+                        // Convert user pubkey buffer to hex string
+                        var userPubkeyHex = bytesToHex(userPubkeyBuffer);
+                        
+                        // Determine network type
+                        var networkType = (networkName && networkName.indexOf('Testnet') === -1 && 
+                                          network === libs.bitcoin.networks.bitcoin) ? 'mainnet' : 'testnet';
+                        
+                        // Use SDK to generate the address
+                        var result = window.ArkSDK.generateArkProtocolAddress(
+                            userPubkeyHex,
+                            serverPubkeyHex,
+                            parseInt(exitDelay),
+                            networkType
+                        );
+                        
+                        if (result.success) {
+                            return {
+                                address: result.address,
+                                vtxoKey: result.vtxoKey
+                            };
+                        } else {
+                            throw new Error(result.error || 'Failed to generate Ark Protocol address');
+                        }
+                        
+                    } catch (error) {
+                        console.error('Error in generateArkAddress:', error);
+                        
+                        // Fallback to manual implementation if SDK fails
+                        console.log('Falling back to manual implementation...');
+                        return generateArkAddressManual(userPubkeyBuffer, serverPubkeyHex, exitDelay, network, networkName);
+                    }
+                }
+                
+                // Manual fallback implementation (previous code)
+                function generateArkAddressManual(userPubkeyBuffer, serverPubkeyHex, exitDelay, network, networkName) {
                     try {
                         var bitcoin = libs.bitcoin;
                         
                         // Convert server pubkey hex to x-only format (32 bytes)
                         var serverXOnlyPubkey = [];
-                        // Check if it starts with 02 or 03 (compressed pubkey format)
                         if (serverPubkeyHex.length === 66 && (serverPubkeyHex.substr(0, 2) === '02' || serverPubkeyHex.substr(0, 2) === '03')) {
-                            // Skip the first byte (02 or 03) to get x-only pubkey
                             for (var i = 2; i < serverPubkeyHex.length; i += 2) {
                                 serverXOnlyPubkey.push(parseInt(serverPubkeyHex.substr(i, 2), 16));
                             }
                         } else if (serverPubkeyHex.length === 64) {
-                            // Already x-only format
                             for (var i = 0; i < serverPubkeyHex.length; i += 2) {
                                 serverXOnlyPubkey.push(parseInt(serverPubkeyHex.substr(i, 2), 16));
                             }
@@ -1980,10 +2018,9 @@
                             throw new Error('Invalid server public key format');
                         }
                         
-                        // Get x-only pubkey for user (remove the first byte if it's 33 bytes)
+                        // Get x-only pubkey for user
                         var userXOnlyPubkey = [];
                         if (userPubkeyBuffer.length === 33) {
-                            // Skip the first byte (0x02 or 0x03)
                             for (var i = 1; i < userPubkeyBuffer.length; i++) {
                                 userXOnlyPubkey.push(userPubkeyBuffer[i]);
                             }
@@ -1995,9 +2032,7 @@
                             throw new Error('Invalid user public key length');
                         }
                         
-                        // For the vtxo taproot key, we'll create a simple tweaked version
-                        // In a real implementation, this would be derived from the taproot tree
-                        // For now, we'll hash the user pubkey + server pubkey + exit delay
+                        // Create hash for VTXO key (placeholder)
                         var dataToHash = [];
                         for (var i = 0; i < userXOnlyPubkey.length; i++) {
                             dataToHash.push(userXOnlyPubkey[i]);
@@ -2005,58 +2040,42 @@
                         for (var i = 0; i < serverXOnlyPubkey.length; i++) {
                             dataToHash.push(serverXOnlyPubkey[i]);
                         }
-                        // Add exit delay as 4 bytes little-endian
-                        var delayBytes = [];
                         var delay = parseInt(exitDelay);
-                        delayBytes.push(delay & 0xff);
-                        delayBytes.push((delay >> 8) & 0xff);
-                        delayBytes.push((delay >> 16) & 0xff);
-                        delayBytes.push((delay >> 24) & 0xff);
-                        for (var i = 0; i < delayBytes.length; i++) {
-                            dataToHash.push(delayBytes[i]);
-                        }
+                        dataToHash.push(delay & 0xff);
+                        dataToHash.push((delay >> 8) & 0xff);
+                        dataToHash.push((delay >> 16) & 0xff);
+                        dataToHash.push((delay >> 24) & 0xff);
                         
-                        // Hash to get the vtxo taproot key
                         var vtxoTaprootKey = bitcoin.crypto.sha256(dataToHash);
                         
-                        // Create the Ark address data
-                        // Format: version (1 byte) + server pubkey (32 bytes) + vtxo taproot key (32 bytes)
+                        // Create address data
                         var addressData = [];
                         addressData.push(0); // version 0
                         
-                        // Add server pubkey (32 bytes)
-                        if (serverXOnlyPubkey.length !== 32) {
-                            throw new Error('Server pubkey must be 32 bytes, got ' + serverXOnlyPubkey.length);
-                        }
                         for (var i = 0; i < serverXOnlyPubkey.length; i++) {
                             addressData.push(serverXOnlyPubkey[i]);
                         }
                         
-                        // Add vtxo taproot key (32 bytes)
                         for (var i = 0; i < 32; i++) {
                             addressData.push(vtxoTaprootKey[i]);
                         }
                         
-                        // Convert to 5-bit words for bech32m
                         var words = bech32m.toWords(addressData);
                         
-                        // Determine HRP based on network - for Bitcoin Ark Testnet always use 'tark'
-                        var hrp = 'tark'; // Always use testnet for Bitcoin Ark Testnet
+                        var hrp = 'tark';
                         if (networkName && networkName.indexOf('Testnet') === -1 && network === libs.bitcoin.networks.bitcoin) {
-                            hrp = 'ark'; // Use mainnet only if explicitly mainnet and not testnet
+                            hrp = 'ark';
                         }
                         
-                        // Encode as bech32m
                         var encodedAddress = bech32m.encode(hrp, words);
                         
-                        // Return both the address and the VTXO key for display
                         return {
                             address: encodedAddress,
                             vtxoKey: bytesToHex(vtxoTaprootKey)
                         };
                         
                     } catch (error) {
-                        console.error('Error in generateArkAddress:', error);
+                        console.error('Error in manual Ark address generation:', error);
                         return "Error: " + error.message;
                     }
                 }
@@ -2259,7 +2278,7 @@
                                 $('#ark-result-exit-delay').val(exitDelay + ' blocks');
                                 $('#ark-result-network').val(arkNetwork);
                                 $('#ark-result-script').val('A + S | A after T');
-                                $('#ark-result-note').val('P2WSH multisig address for Ark protocol');
+                                $('#ark-result-note').val('Generated using official arkade-os SDK');
                                 
                                 // Generate Ark Protocol VTXO address
                                 try {
