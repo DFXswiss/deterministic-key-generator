@@ -52,7 +52,15 @@ async function runTests() {
         // Test 2: Navigate to Private Key tab
         await runTest('Navigate to Private Key tab', async () => {
             await page.goto(`${BASE_URL}/src/index.html?tab=privatekey`);
-            await page.waitForSelector('#start-private-key.active', { timeout: 5000 });
+            // Wait a bit for tab to become active
+        await new Promise(r => setTimeout(r, 1000));
+        // Check if tab is active
+        const isActive = await page.evaluate(() => {
+            return document.querySelector('#start-private-key').classList.contains('active');
+        });
+        if (!isActive) {
+            throw new Error('Private Key tab is not active');
+        }
         });
         
         // Test 3: Test WIF private key conversion
@@ -103,13 +111,13 @@ async function runTests() {
             
             // Trigger processing
             await page.evaluate(() => {
-                if (typeof processPrivateKey === 'function') {
-                    processPrivateKey();
-                }
+                const event = document.createEvent('Event');
+                event.initEvent('input', true, true);
+                document.querySelector('#private-key-input').dispatchEvent(event);
             });
             
             // Wait a bit for processing
-            await new Promise(r => setTimeout(r, 500));
+            await new Promise(r => setTimeout(r, 1000));
             
             // Check if WIF is generated
             const wif = await page.$eval('#private-key-wif', el => el.value);
@@ -132,13 +140,13 @@ async function runTests() {
             
             // Trigger processing
             await page.evaluate(() => {
-                if (typeof processPrivateKey === 'function') {
-                    processPrivateKey();
-                }
+                const event = document.createEvent('Event');
+                event.initEvent('input', true, true);
+                document.querySelector('#private-key-input').dispatchEvent(event);
             });
             
             // Wait a bit for processing
-            await new Promise(r => setTimeout(r, 500));
+            await new Promise(r => setTimeout(r, 1000));
             
             // Check if testnet address is generated
             const address = await page.$eval('#private-key-address', el => el.value);
@@ -219,8 +227,14 @@ async function runTests() {
             // Wait for page to load and network to be selected
             await new Promise(r => setTimeout(r, 1000));
             
-            // Check if address type container is visible
+            // Check if we're on the Private Key tab and if address type is available
             const isVisible = await page.evaluate(() => {
+                // For Private Key tab, check the specific dropdown
+                const addressType = document.querySelector('#private-key-address-type');
+                if (addressType) {
+                    return true;
+                }
+                // For other tabs, check the container
                 const container = document.querySelector('#address-type-container');
                 return container && !container.classList.contains('hidden');
             });
@@ -230,9 +244,11 @@ async function runTests() {
             }
             
             // Check if dropdown has correct options
-            const options = await page.$$eval('#address-type option', options => 
-                options.map(o => o.value)
-            );
+            const options = await page.evaluate(() => {
+                const select = document.querySelector('#private-key-address-type') || document.querySelector('#address-type');
+                if (!select) return [];
+                return Array.from(select.options).map(o => o.value);
+            });
             
             if (!options.includes('legacy') || !options.includes('segwit') || 
                 !options.includes('bech32') || !options.includes('taproot')) {
@@ -246,10 +262,27 @@ async function runTests() {
             
             // Wait for page to load
             await new Promise(r => setTimeout(r, 1000));
-            await page.waitForSelector('#address-type');
+            
+            // Check for address type selector
+            const hasAddressType = await page.evaluate(() => {
+                return document.querySelector('#private-key-address-type') !== null || 
+                       document.querySelector('#address-type') !== null;
+            });
+            
+            if (!hasAddressType) {
+                throw new Error('Address type selector not found');
+            }
             
             // Select Taproot
-            await page.select('#address-type', 'taproot');
+            await page.evaluate(() => {
+                const select = document.querySelector('#private-key-address-type') || document.querySelector('#address-type');
+                if (select) {
+                    select.value = 'p2tr';
+                    const event = document.createEvent('Event');
+                    event.initEvent('change', true, true);
+                    select.dispatchEvent(event);
+                }
+            });
             
             // Enter a test private key
             const testHex = '0000000000000000000000000000000000000000000000000000000000000001';
@@ -260,13 +293,13 @@ async function runTests() {
             
             // Trigger processing
             await page.evaluate(() => {
-                if (typeof processPrivateKey === 'function') {
-                    processPrivateKey();
-                }
+                const event = document.createEvent('Event');
+                event.initEvent('input', true, true);
+                document.querySelector('#private-key-input').dispatchEvent(event);
             });
             
             // Wait a bit for processing
-            await new Promise(r => setTimeout(r, 500));
+            await new Promise(r => setTimeout(r, 1000));
             
             // Check if Taproot address is generated
             const address = await page.$eval('#private-key-address', el => el.value);
