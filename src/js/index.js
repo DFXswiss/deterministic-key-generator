@@ -966,7 +966,7 @@
             var word = words[i];
             var language = getLanguage();
             if (WORDLISTS[language].indexOf(word) == -1) {
-                console.log("Finding closest match to " + word);
+                // Finding closest match to word
                 var nearestWord = findNearestWord(word);
                 return word + " not in wordlist, did you mean " + nearestWord + "?";
             }
@@ -1116,7 +1116,7 @@
             path += change;
             DOM.bip44path.val(path);
             var derivationPath = DOM.bip44path.val();
-            console.log("Using derivation path from BIP44 tab: " + derivationPath);
+            // Using derivation path from BIP44 tab
             return derivationPath;
         }
         else if (bip49TabSelected()) {
@@ -1131,7 +1131,7 @@
             path += change;
             DOM.bip49path.val(path);
             var derivationPath = DOM.bip49path.val();
-            console.log("Using derivation path from BIP49 tab: " + derivationPath);
+            // Using derivation path from BIP49 tab
             return derivationPath;
         }
         else if (bip84TabSelected()) {
@@ -1146,7 +1146,7 @@
             path += change;
             DOM.bip84path.val(path);
             var derivationPath = DOM.bip84path.val();
-            console.log("Using derivation path from BIP84 tab: " + derivationPath);
+            // Using derivation path from BIP84 tab
             return derivationPath;
         }
         else if (bip86TabSelected()) {
@@ -1161,24 +1161,24 @@
             path += change;
             DOM.bip86path.val(path);
             var derivationPath = DOM.bip86path.val();
-            console.log("Using derivation path from BIP86 tab: " + derivationPath);
+            // Using derivation path from BIP86 tab
             return derivationPath;
         }
         else if (bip32TabSelected()) {
             var derivationPath = DOM.bip32path.val();
-            console.log("Using derivation path from BIP32 tab: " + derivationPath);
+            // Using derivation path from BIP32 tab
             return derivationPath;
         }
         else if (bip141TabSelected()) {
             var derivationPath = DOM.bip141path.val();
-            console.log("Using derivation path from BIP141 tab: " + derivationPath);
+            // Using derivation path from BIP141 tab
             return derivationPath;
         }
         else if (ldsTabSelected()) {
             return ldsWallet.getDerivationPath();
         }
         else {
-            console.log("Unknown derivation path");
+            // Unknown derivation path
         }
     }
 
@@ -1637,11 +1637,11 @@
                     if (useBip38) {
                         if(isGRS())
                             privkey = libs.groestlcoinjsBip38.encrypt(keyPair.d.toBuffer(), false, bip38password, function(p) {
-                                console.log("Progressed " + p.percent.toFixed(1) + "% for index " + index);
+                                // Progress update
                             }, null, networks[DOM.network.val()].name.includes("Testnet"));
                         else
                             privkey = libs.bip38.encrypt(keyPair.d.toBuffer(), false, bip38password, function(p) {
-                                console.log("Progressed " + p.percent.toFixed(1) + "% for index " + index);
+                                // Progress update
                             });
                     }
                 }
@@ -2367,8 +2367,8 @@
             };
         }
         catch (e) {
-            console.log("Error detecting entropy strength with zxcvbn:");
-            console.log(e);
+            // Error detecting entropy strength with zxcvbn
+            // console.error(e);
         }
         var entropyTypeStr = getEntropyTypeStr(entropy);
         DOM.entropyTypeInputs.attr("checked", false);
