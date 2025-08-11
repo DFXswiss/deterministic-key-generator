@@ -552,6 +552,12 @@
                                 <!-- Results section -->
                                 <div id="private-key-results" class="hidden">
                                     <div class="form-group">
+                                        <label class="col-sm-2 control-label">Private Key (WIF)</label>
+                                        <div class="col-sm-10">
+                                            <textarea id="private-key-wif" class="form-control private-data" readonly data-show-qr autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
                                         <label class="col-sm-2 control-label">Public Key</label>
                                         <div class="col-sm-10">
                                             <textarea id="private-key-public" class="form-control" readonly data-show-qr autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
@@ -600,12 +606,6 @@
                                             <div class="col-sm-10">
                                                 <input type="text" id="ark-result-note" class="form-control" readonly value="Full address encoding requires @arkade-os/sdk">
                                             </div>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-2 control-label">Private Key (WIF)</label>
-                                        <div class="col-sm-10">
-                                            <textarea id="private-key-wif" class="form-control private-data" readonly data-show-qr autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
                                         </div>
                                     </div>
                                 </div>
