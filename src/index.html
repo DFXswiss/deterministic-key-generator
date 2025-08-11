@@ -1885,7 +1885,7 @@
                 // (bech32m definition has been moved earlier in the file)
 
                 // Generate Ark address using bech32m encoding
-                function generateArkAddress(userPubkeyBuffer, serverPubkeyHex, exitDelay, network) {
+                function generateArkAddress(userPubkeyBuffer, serverPubkeyHex, exitDelay, network, networkName) {
                     try {
                         var bitcoin = libs.bitcoin;
                         
@@ -1966,8 +1966,11 @@
                         // Convert to 5-bit words for bech32m
                         var words = bech32m.toWords(addressData);
                         
-                        // Determine HRP based on network
-                        var hrp = network === libs.bitcoin.networks.bitcoin ? 'ark' : 'tark';
+                        // Determine HRP based on network - for Bitcoin Ark Testnet always use 'tark'
+                        var hrp = 'tark'; // Always use testnet for Bitcoin Ark Testnet
+                        if (networkName && networkName.indexOf('Testnet') === -1 && network === libs.bitcoin.networks.bitcoin) {
+                            hrp = 'ark'; // Use mainnet only if explicitly mainnet and not testnet
+                        }
                         
                         // Encode as bech32m
                         return bech32m.encode(hrp, words);
@@ -2167,7 +2170,7 @@
                                 
                                 // Generate Ark address using taproot
                                 try {
-                                    address = generateArkAddress(userPubkey, serverPubkey, exitDelay, bitcoinNetwork);
+                                    address = generateArkAddress(userPubkey, serverPubkey, exitDelay, bitcoinNetwork, networkName);
                                 } catch (e) {
                                     console.error('Error generating Ark address:', e);
                                     address = 'Error generating Ark address';
