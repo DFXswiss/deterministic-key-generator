@@ -573,6 +573,19 @@
                                     <!-- Ark Address Result Fields -->
                                     <div class="ark-result-fields hidden">
                                         <div class="form-group">
+                                            <label class="col-sm-2 control-label">Standard Ark Address</label>
+                                            <div class="col-sm-10">
+                                                <input type="text" id="ark-standard-address" class="form-control" readonly title="Standard P2TR address with ark/tark prefix">
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-sm-2 control-label">Protocol VTXO Address</label>
+                                            <div class="col-sm-10">
+                                                <input type="text" id="ark-protocol-address" class="form-control" readonly title="Ark Protocol address for off-chain transactions">
+                                            </div>
+                                        </div>
+                                        <hr>
+                                        <div class="form-group">
                                             <label class="col-sm-2 control-label">User Pubkey (A)</label>
                                             <div class="col-sm-10">
                                                 <input type="text" id="ark-result-user-pubkey" class="form-control" readonly>
@@ -594,6 +607,12 @@
                                             <label class="col-sm-2 control-label">Network</label>
                                             <div class="col-sm-10">
                                                 <input type="text" id="ark-result-network" class="form-control" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-sm-2 control-label">VTXO Taproot Key</label>
+                                            <div class="col-sm-10">
+                                                <input type="text" id="ark-result-vtxo-key" class="form-control" readonly>
                                             </div>
                                         </div>
                                         <div class="form-group">
@@ -1884,7 +1903,62 @@
                 
                 // (bech32m definition has been moved earlier in the file)
 
-                // Generate Ark address using bech32m encoding
+                // Helper function to convert byte array to hex string
+                function bytesToHex(bytes) {
+                    var hex = '';
+                    for (var i = 0; i < bytes.length; i++) {
+                        var byte = bytes[i].toString(16);
+                        if (byte.length < 2) byte = '0' + byte;
+                        hex += byte;
+                    }
+                    return hex;
+                }
+                
+                // Generate standard Ark Taproot address (P2TR with ark/tark prefix)
+                // This follows the standard from the Ark documentation
+                function generateStandardArkAddress(publicKeyBuffer, network, networkName) {
+                    try {
+                        // Get x-only public key (remove the first byte if it's 33 bytes)
+                        var xOnlyPubkey = [];
+                        if (publicKeyBuffer.length === 33) {
+                            // Skip the first byte (0x02 or 0x03)
+                            for (var i = 1; i < publicKeyBuffer.length; i++) {
+                                xOnlyPubkey.push(publicKeyBuffer[i]);
+                            }
+                        } else if (publicKeyBuffer.length === 32) {
+                            for (var i = 0; i < publicKeyBuffer.length; i++) {
+                                xOnlyPubkey.push(publicKeyBuffer[i]);
+                            }
+                        } else {
+                            throw new Error('Invalid public key length');
+                        }
+                        
+                        // Create witness program for Taproot (version 1 + 32 bytes x-only pubkey)
+                        var witnessProgram = [0x01]; // Witness version 1 for Taproot
+                        for (var i = 0; i < xOnlyPubkey.length; i++) {
+                            witnessProgram.push(xOnlyPubkey[i]);
+                        }
+                        
+                        // Convert to 5-bit words for bech32m
+                        var words = bech32m.toWords(witnessProgram);
+                        
+                        // Determine HRP based on network
+                        var hrp = 'tark'; // Default to testnet
+                        if (networkName && networkName.indexOf('Testnet') === -1 && network === libs.bitcoin.networks.bitcoin) {
+                            hrp = 'ark'; // Use mainnet only if explicitly mainnet and not testnet
+                        }
+                        
+                        // Encode as bech32m
+                        return bech32m.encode(hrp, words);
+                        
+                    } catch (error) {
+                        console.error('Error in generateStandardArkAddress:', error);
+                        return "Error: " + error.message;
+                    }
+                }
+                
+                // Generate Ark Protocol VTXO address (for off-chain transactions)
+                // This is the special address format for Ark Protocol with server pubkey and VTXO key
                 function generateArkAddress(userPubkeyBuffer, serverPubkeyHex, exitDelay, network, networkName) {
                     try {
                         var bitcoin = libs.bitcoin;
@@ -1973,7 +2047,13 @@
                         }
                         
                         // Encode as bech32m
-                        return bech32m.encode(hrp, words);
+                        var encodedAddress = bech32m.encode(hrp, words);
+                        
+                        // Return both the address and the VTXO key for display
+                        return {
+                            address: encodedAddress,
+                            vtxoKey: bytesToHex(vtxoTaprootKey)
+                        };
                         
                     } catch (error) {
                         console.error('Error in generateArkAddress:', error);
@@ -2159,6 +2239,19 @@
                             // Show Ark result fields
                             $('.ark-result-fields').removeClass('hidden');
                             
+                            // Always generate standard Ark address
+                            try {
+                                var standardAddress = generateStandardArkAddress(userPubkey, bitcoinNetwork, networkName);
+                                $('#ark-standard-address').val(standardAddress);
+                                // Use standard address as main address if no server info
+                                if (!serverPubkey || !exitDelay) {
+                                    address = standardAddress;
+                                }
+                            } catch (e) {
+                                console.error('Error generating standard Ark address:', e);
+                                $('#ark-standard-address').val('Error: ' + e.message);
+                            }
+                            
                             if (serverPubkey && exitDelay) {
                                 // Populate individual Ark result fields
                                 $('#ark-result-user-pubkey').val(pubkey);
@@ -2168,12 +2261,20 @@
                                 $('#ark-result-script').val('A + S | A after T');
                                 $('#ark-result-note').val('P2WSH multisig address for Ark protocol');
                                 
-                                // Generate Ark address using taproot
+                                // Generate Ark Protocol VTXO address
                                 try {
-                                    address = generateArkAddress(userPubkey, serverPubkey, exitDelay, bitcoinNetwork, networkName);
+                                    var arkResult = generateArkAddress(userPubkey, serverPubkey, exitDelay, bitcoinNetwork, networkName);
+                                    if (typeof arkResult === 'object' && arkResult.address) {
+                                        $('#ark-protocol-address').val(arkResult.address);
+                                        $('#ark-result-vtxo-key').val(arkResult.vtxoKey);
+                                        // Use protocol address as main address when server info available
+                                        address = arkResult.address;
+                                    } else {
+                                        $('#ark-protocol-address').val(arkResult); // In case of error string
+                                    }
                                 } catch (e) {
-                                    console.error('Error generating Ark address:', e);
-                                    address = 'Error generating Ark address';
+                                    console.error('Error generating Ark Protocol address:', e);
+                                    $('#ark-protocol-address').val('Error: ' + e.message);
                                 }
                             } else {
                                 // Show user pubkey but indicate server info is needed

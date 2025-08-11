@@ -2870,7 +2870,7 @@
             name: "BTC - Bitcoin Ark Testnet",
             onSelect: function() {
                 network = libs.bitcoin.networks.testnet;
-                setHdCoin(1);
+                setHdCoin(1237); // Ark coin type as per BIP44
             },
         },
         {
