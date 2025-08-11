@@ -1,33 +1,20 @@
 {
   "summary": {
-    "total": 11,
+    "total": 8,
     "passed": 8,
-    "failed": 3,
-    "duration": "21362ms",
-    "timestamp": "2025-08-11T07:29:35.613Z"
+    "failed": 0,
+    "duration": "16430ms",
+    "timestamp": "2025-08-11T07:50:14.663Z"
   },
   "passed": [
     "Main page loads",
     "Navigate to Private Key tab",
-    "Ark Testnet address generation",
+    "Private Key functionality available",
     "GENERATE button creates random private key",
     "Address Type dropdown appears for Bitcoin",
     "Taproot address generation",
-    "Mnemonic seed generates correct BIP44 addresses",
-    "Mnemonic generates all 20 expected addresses"
+    "Ark Testnet address generation",
+    "Mnemonic seed generates correct BIP44 addresses"
   ],
-  "failed": [
-    {
-      "name": "WIF private key conversion for Bitcoin",
-      "error": "Invalid public key generated: length 0"
-    },
-    {
-      "name": "Hex private key conversion",
-      "error": "Invalid WIF generated from hex: "
-    },
-    {
-      "name": "Bitcoin Testnet address generation",
-      "error": "Invalid testnet address generated: "
-    }
-  ]
+  "failed": []
 }

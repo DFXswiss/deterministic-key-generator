@@ -1940,10 +1940,28 @@
                         // Try to parse the private key in different formats
                         var isWifFormat = false;
                         try {
-                            // Try WIF format first
+                            // Try WIF format first with the selected network
                             keyPair = libs.bitcoin.ECPair.fromWIF(privKeyInput, bitcoinNetwork);
                             isWifFormat = true;
                         } catch (e1) {
+                            // If that fails and we're on testnet, also try without network parameter
+                            // This handles some edge cases with WIF parsing
+                            if (networkName && networkName.includes("Testnet")) {
+                                try {
+                                    keyPair = libs.bitcoin.ECPair.fromWIF(privKeyInput);
+                                    // Re-create with correct network
+                                    var d = keyPair.d;
+                                    keyPair = new libs.bitcoin.ECPair(d, null, {
+                                        network: bitcoinNetwork,
+                                        compressed: keyPair.compressed
+                                    });
+                                    isWifFormat = true;
+                                } catch (e1b) {
+                                    // Continue to hex parsing
+                                }
+                            }
+                            
+                            if (!isWifFormat) {
                             // Not WIF, try other formats
                             var hexKey = privKeyInput;
                             
@@ -2021,6 +2039,7 @@
                             } catch (e2) {
                                 throw new Error("Failed to create key pair: " + e2.message);
                             }
+                            } // Close the if (!isWifFormat) block
                         }
                         
                         // Generate public key and address based on network type
@@ -2132,15 +2151,9 @@
                         $('#private-key-public').val(pubkey);
                         $('#private-key-address').val(address);
                         
-                        // Only show WIF if the input was not already in WIF format
-                        if (isWifFormat) {
-                            // Hide WIF field if input was already WIF or not applicable
-                            $('#private-key-wif').parent().parent().addClass('hidden');
-                        } else {
-                            // Show WIF field if we converted from hex to WIF
-                            $('#private-key-wif').parent().parent().removeClass('hidden');
-                            $('#private-key-wif').val(wif);
-                        }
+                        // Always show WIF field and display the WIF value
+                        $('#private-key-wif').parent().parent().removeClass('hidden');
+                        $('#private-key-wif').val(wif);
                         
                         // Don't show results here for Ark (already shown in async handler)
                         if (networkName !== "BTC - Bitcoin Ark Testnet") {
@@ -2154,6 +2167,9 @@
                         $('#private-key-error').removeClass('hidden').text(safeErrorMessage.replace(/[<>]/g, ''));
                     }
                 }
+                
+                // Expose processPrivateKey to window for testing
+                window.processPrivateKey = processPrivateKey;
                 
                 // Event handlers for private key input and Ark parameters
                 $('#private-key-input, #private-key-address-type, #private-key-compressed').on('change input', function() {

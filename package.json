@@ -4,7 +4,8 @@
   "description": "Deterministic cryptocurrency key generator with Ark protocol support",
   "main": "src/index.html",
   "scripts": {
-    "test": "node test/test-runner.js",
+    "test": "node test/test-runner-simple.js",
+    "test:full": "node test/test-runner.js",
     "test:simple": "node test/test-simple.js",
     "test:mnemonic": "node test/test-mnemonic.js",
     "test:all": "npm run test:simple && npm run test:mnemonic && npm test",

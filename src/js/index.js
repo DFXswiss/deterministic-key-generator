@@ -1694,11 +1694,11 @@
                         // BIP86 Taproot address generation
                         // Generate Taproot address using Bech32m encoding
                         try {
-                            var pubkey = key.getPublicKeyBuffer();
+                            var pubkeyBuffer = key.getPublicKeyBuffer();
                             // For taproot, we need the x-only public key (32 bytes instead of 33)
                             var xOnlyPubkey = [];
                             for (var i = 1; i < 33; i++) {
-                                xOnlyPubkey.push(pubkey[i]);
+                                xOnlyPubkey.push(pubkeyBuffer[i]);
                             }
                             
                             // Determine HRP based on network

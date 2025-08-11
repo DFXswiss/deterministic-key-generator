@@ -65,22 +65,42 @@ async function runTests() {
         
         // Test 3: Test WIF private key conversion
         await runTest('WIF private key conversion for Bitcoin', async () => {
-            await page.goto(`${BASE_URL}/src/index.html?tab=privatekey&coin=BTC%20-%20Bitcoin`);
+            await page.goto(`${BASE_URL}/src/index.html`);
             await page.waitForSelector('#private-key-input');
+            
+            // Wait for page to fully load
+            await new Promise(r => setTimeout(r, 2000));
+            
+            // Navigate to Private Key tab and select Bitcoin
+            await page.evaluate(() => {
+                // Click on Private Key tab
+                document.querySelector('#start-private-key a').click();
+                // Select Bitcoin in the network dropdown
+                document.querySelector('#network-private-key').value = '0';
+                const event = document.createEvent('Event');
+                event.initEvent('change', true, true);
+                document.querySelector('#network-private-key').dispatchEvent(event);
+            });
+            
+            // Wait for tab to be ready
+            await new Promise(r => setTimeout(r, 1000));
             
             // Enter a test WIF private key
             const testWIF = 'L1uyy5qTuGrVXrmrsvHWHgVzW9kKdrp27wBC7Vs6nZDTF2BRUVwy';
+            await page.evaluate(() => {
+                document.querySelector('#private-key-input').value = '';
+            });
             await page.type('#private-key-input', testWIF);
             
-            // Trigger processing
+            // Trigger processing via input event (which should work now that handlers are attached)
             await page.evaluate(() => {
                 const event = document.createEvent('Event');
                 event.initEvent('input', true, true);
                 document.querySelector('#private-key-input').dispatchEvent(event);
             });
             
-            // Wait more for processing
-            await new Promise(r => setTimeout(r, 2000));
+            // Wait for processing
+            await new Promise(r => setTimeout(r, 1000));
             
             // Check if public key is generated (should be exactly 66 chars for compressed)
             const publicKey = await page.$eval('#private-key-public', el => el.value);
@@ -97,9 +117,7 @@ async function runTests() {
         
         // Test 4: Test hex private key conversion
         await runTest('Hex private key conversion', async () => {
-            await page.goto(`${BASE_URL}/src/index.html?tab=privatekey&coin=BTC%20-%20Bitcoin`);
-            await page.waitForSelector('#private-key-input');
-            
+            // Continue from previous test state
             // Clear previous input
             await page.evaluate(() => {
                 document.querySelector('#private-key-input').value = '';
@@ -133,10 +151,18 @@ async function runTests() {
         
         // Test 5: Test Bitcoin Testnet
         await runTest('Bitcoin Testnet address generation', async () => {
-            await page.goto(`${BASE_URL}/src/index.html?tab=privatekey&coin=BTC%20-%20Bitcoin%20Testnet`);
-            await page.waitForSelector('#private-key-input');
+            // Select Bitcoin Testnet
+            await page.evaluate(() => {
+                document.querySelector('#network-private-key').value = '23';
+                const event = document.createEvent('Event');
+                event.initEvent('change', true, true);
+                document.querySelector('#network-private-key').dispatchEvent(event);
+            });
             
-            // Use a hex key for testnet instead of WIF (WIF format detection issue)
+            // Wait for network to update
+            await new Promise(r => setTimeout(r, 1000));
+            
+            // Clear and enter a hex key for testnet
             const testHex = '0000000000000000000000000000000000000000000000000000000000000001';
             await page.evaluate((hex) => {
                 document.querySelector('#private-key-input').value = hex;
@@ -149,10 +175,7 @@ async function runTests() {
                 document.querySelector('#private-key-input').dispatchEvent(event);
             });
             
-            // Wait a bit for processing
-            await new Promise(r => setTimeout(r, 1000));
-            
-            // Wait more for testnet to load
+            // Wait for processing
             await new Promise(r => setTimeout(r, 2000));
             
             // Check if testnet address is generated
@@ -163,6 +186,10 @@ async function runTests() {
                     const event = document.createEvent('Event');
                     event.initEvent('input', true, true);
                     document.querySelector('#private-key-input').dispatchEvent(event);
+                    // Also call processPrivateKey directly if available
+                    if (typeof processPrivateKey === 'function') {
+                        processPrivateKey();
+                    }
                 });
                 await new Promise(r => setTimeout(r, 1000));
                 
