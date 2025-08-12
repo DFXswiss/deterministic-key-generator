@@ -1412,14 +1412,13 @@
                     }
                 }
                 
-                // Get the key pair
+                // Get the key pair - for consistency with private key tab, ensure compressed=true
                 var keyPair = currentKey.keyPair;
-                var useUncompressed = DOM.useBip38.prop("checked");
-                if (useUncompressed) {
-                    keyPair = new libs.bitcoin.ECPair(keyPair.d, null, { network: network, compressed: false });
-                    if(isGRS())
-                        keyPair = new libs.groestlcoinjs.ECPair(keyPair.d, null, { network: network, compressed: false });
-                }
+                // For Ark, we need to ensure we use compressed keys like in private key tab
+                // Create a new ECPair with explicit compressed=true setting  
+                keyPair = new libs.bitcoin.ECPair(keyPair.d, null, { network: network, compressed: true });
+                if(isGRS())
+                    keyPair = new libs.groestlcoinjs.ECPair(keyPair.d, null, { network: network, compressed: true });
                 
                 // Get private key
                 var hasPrivkey = !currentKey.isNeutered();
