@@ -2280,9 +2280,9 @@
                         var address = '';
                         var wif = '';
                         
-                        // Handle Bitcoin Ark Testnet specially
+                        // Handle Bitcoin Ark networks specially
                         console.log('Checking for Ark network. NetworkName:', networkName); // Debug
-                        if (networkName === "BTC - Bitcoin Ark Testnet") {
+                        if (networkName === "BTC - Bitcoin Ark Testnet" || networkName === "BTC - Bitcoin Ark") {
                             console.log('Ark network detected!'); // Debug
                             // For Ark, we need server info to generate special address
                             // Get user's public key
@@ -2291,7 +2291,8 @@
                             wif = keyPair.toWIF();
                             
                             // Get server params from form fields (or fetch if not available)
-                            var serverUrl = $('#ark-server-url').val() || 'https://mutinynet.arkade.sh';
+                            var defaultServerUrl = networkName === "BTC - Bitcoin Ark" ? 'https://bitcoin-beta.arkade.sh' : 'https://mutinynet.arkade.sh';
+                            var serverUrl = $('#ark-server-url').val() || defaultServerUrl;
                             var serverPubkey = $('#ark-server-pubkey').val();
                             var exitDelay = $('#ark-exit-delay').val();
                             var arkNetwork = $('#ark-network').val();
@@ -2375,7 +2376,8 @@
                                         }
                                     } else {
                                         // Fallback to async method if manual not available
-                                        var serverUrl = $('#ark-server-url').val() || 'https://mutinynet.arkade.sh';
+                                        var defaultServerUrl = networkName === "BTC - Bitcoin Ark" ? 'https://bitcoin-beta.arkade.sh' : 'https://mutinynet.arkade.sh';
+                                        var serverUrl = $('#ark-server-url').val() || defaultServerUrl;
                                         generateArkAddress(userPubkey, serverUrl, bitcoinNetwork, networkName).then(function(arkResult) {
                                             if (arkResult && typeof arkResult === 'object' && arkResult.address) {
                                                 $('#ark-protocol-address').val(arkResult.address);
@@ -2472,7 +2474,7 @@
                         $('#private-key-wif').val(wif);
                         
                         // Don't show results here for Ark (already shown in async handler)
-                        if (networkName !== "BTC - Bitcoin Ark Testnet") {
+                        if (networkName !== "BTC - Bitcoin Ark Testnet" && networkName !== "BTC - Bitcoin Ark") {
                             $('#private-key-results').removeClass('hidden');
                         }
                         
@@ -2509,9 +2511,19 @@
                         $('.segwit-options').addClass('hidden');
                     }
                     
-                    // Show Ark params for Bitcoin Ark Testnet
-                    if (networkName === "BTC - Bitcoin Ark Testnet") {
+                    // Show Ark params for Bitcoin Ark networks
+                    if (networkName === "BTC - Bitcoin Ark Testnet" || networkName === "BTC - Bitcoin Ark") {
                         $('.ark-params').removeClass('hidden');
+                        
+                        // Set appropriate server URL based on network
+                        if (networkName === "BTC - Bitcoin Ark") {
+                            // Mainnet server URL
+                            $('#ark-server-url').val('https://bitcoin-beta.arkade.sh');
+                        } else {
+                            // Testnet server URL
+                            $('#ark-server-url').val('https://mutinynet.arkade.sh');
+                        }
+                        
                         // Auto-fetch server info if URL is present and fields are empty
                         if ($('#ark-server-url').val() && !$('#ark-server-pubkey').val()) {
                             $('#fetch-ark-info').click();
@@ -2536,7 +2548,7 @@
                 // Update display when Ark parameters change
                 $('#ark-server-pubkey, #ark-exit-delay, #ark-network').on('change input', function() {
                     var networkName = $('#network-private-key option:selected').text();
-                    if (networkName === "BTC - Bitcoin Ark Testnet" && $('#private-key-input').val()) {
+                    if ((networkName === "BTC - Bitcoin Ark Testnet" || networkName === "BTC - Bitcoin Ark") && $('#private-key-input').val()) {
                         processPrivateKey();
                     }
                 });

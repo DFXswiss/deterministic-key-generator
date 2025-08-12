@@ -2867,6 +2867,13 @@
             },
         },
         {
+            name: "BTC - Bitcoin Ark",
+            onSelect: function() {
+                network = libs.bitcoin.networks.bitcoin;
+                setHdCoin(1237); // Ark coin type as per BIP44
+            },
+        },
+        {
             name: "BTC - Bitcoin Ark Testnet",
             onSelect: function() {
                 network = libs.bitcoin.networks.testnet;
