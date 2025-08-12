@@ -1343,66 +1343,47 @@
         DOM.extendedPrivKey.val(extendedPrivKey);
         var extendedPubKey = bip32ExtendedKey.neutered().toBase58();
         DOM.extendedPubKey.val(extendedPubKey);
-        // Display the single address for the path
+        // Display addresses - use different interface for Ark networks
         clearAddressesList();
-        displaySingleAddress();
+        var networkName = networks[DOM.network.val()].name;
+        if (networkName && networkName.includes("Bitcoin Ark")) {
+            showArkInterface();
+            displaySingleAddress();
+        } else {
+            showNormalInterface();
+            var initialAddressCount = parseInt(DOM.rowsToAdd.val());
+            displayAddresses(0, initialAddressCount);
+        }
 
         if (isELA()) {
             displayBip32InfoForELA();
         }
     }
 
+    function showArkInterface() {
+        // Hide normal table and CSV interface
+        $('#table').hide();
+        $('#csv').hide();
+        $('.nav-tabs').hide();
+        $('#more-rows-section').hide();
+        // Show Ark-specific interface
+        $('#ark-interface').show();
+    }
+
+    function showNormalInterface() {
+        // Show normal table and CSV interface
+        $('#table').show();
+        $('#csv').show();
+        $('.nav-tabs').show();
+        $('#more-rows-section').show();
+        // Hide Ark-specific interface
+        $('#ark-interface').hide();
+    }
+
     function displaySingleAddress() {
-        // Parse the derivation path from the input
-        var path = DOM.derivationPathInput.val();
-        
-        // Check if this is an Ark network
-        var networkName = networks[DOM.network.val()].name;
-        if (networkName && networkName.includes("Bitcoin Ark")) {
-            DOM.privateKeyDisplay.val("Use Private Key tab for Ark addresses");
-            DOM.publicKeyDisplay.val("Use Private Key tab for Ark addresses");
-            return;
-        }
-        
-        // Parse the path to get the final index
-        var pathParts = path.replace("m/", "").split("/");
-        var currentKey = bip32ExtendedKey;
-        
-        // Derive the key for the given path
-        for (var i = 0; i < pathParts.length; i++) {
-            var part = pathParts[i];
-            var hardened = part.endsWith("'");
-            var index = parseInt(hardened ? part.slice(0, -1) : part);
-            
-            if (hardened) {
-                currentKey = currentKey.deriveHardened(index);
-            } else {
-                currentKey = currentKey.derive(index);
-            }
-        }
-        
-        // Get the key pair
-        var keyPair = currentKey.keyPair;
-        var useUncompressed = DOM.useBip38.prop("checked");
-        if (useUncompressed) {
-            keyPair = new libs.bitcoin.ECPair(keyPair.d, null, { network: network, compressed: false });
-            if(isGRS())
-                keyPair = new libs.groestlcoinjs.ECPair(keyPair.d, null, { network: network, compressed: false });
-        }
-        
-        // Get private key
-        var hasPrivkey = !currentKey.isNeutered();
-        var privkey = "NA";
-        if (hasPrivkey) {
-            privkey = keyPair.toWIF();
-        }
-        
-        // Get public key
-        var pubkey = keyPair.getPublicKeyBuffer().toString('hex');
-        
-        // Display the keys
-        DOM.privateKeyDisplay.val(privkey);
-        DOM.publicKeyDisplay.val(pubkey);
+        // For Ark networks in mnemonic tab, show informative message
+        DOM.privateKeyDisplay.val("Use Private Key tab for Ark addresses");
+        DOM.publicKeyDisplay.val("Use Private Key tab for Ark addresses");
     }
 
     function displayAddresses(start, total) {
@@ -4365,9 +4346,17 @@
         DOM.extendedPrivKey.val(libs.elastosjs.getBip32ExtendedPrivateKey(seed, coin, account, change));
         DOM.extendedPubKey.val(libs.elastosjs.getBip32ExtendedPublicKey(seed, coin, account, change));
 
-        // Display the single address for the path
+        // Display addresses - use different interface for Ark networks
         clearAddressesList();
-        displaySingleAddress();
+        var networkName = networks[DOM.network.val()].name;
+        if (networkName && networkName.includes("Bitcoin Ark")) {
+            showArkInterface();
+            displaySingleAddress();
+        } else {
+            showNormalInterface();
+            var initialAddressCount = parseInt(DOM.rowsToAdd.val());
+            displayAddresses(0, initialAddressCount);
+        }
     }
 
     function calcAddressForELA(seed, coin, account, change, index) {
@@ -4388,6 +4377,16 @@
     DOM.derivationPathInput.on('input', function() {
         if (DOM.phrase.val() || DOM.rootKey.val()) {
             displaySingleAddress();
+        }
+    });
+
+    // Add event handler for network changes to switch interface
+    DOM.phraseNetwork.on('change', function() {
+        var networkName = networks[DOM.phraseNetwork.val()].name;
+        if (networkName && networkName.includes("Bitcoin Ark")) {
+            showArkInterface();
+        } else {
+            showNormalInterface();
         }
     });
 
