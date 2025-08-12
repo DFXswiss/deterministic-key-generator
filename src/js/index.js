@@ -1482,9 +1482,10 @@
     }
 
     function generateArkAddressForMnemonic(keyPair, networkName) {
-        // Get user's public key
+        // Get user's public key and private key exactly like in private key tab
         var userPubkey = keyPair.getPublicKeyBuffer();
         var pubkeyHex = userPubkey.toString('hex');
+        var privateKeyHex = keyPair.d.toBuffer(32).toString('hex');
         
         // Set server URL based on network
         var defaultServerUrl = networkName === "BTC - Bitcoin Ark" ? 'https://bitcoin-beta.arkade.sh' : 'https://mutinynet.arkade.sh';
@@ -1531,8 +1532,9 @@
                 throw new Error('Ark SDK not loaded. Please refresh the page.');
             }
             
-            // Determine network type
-            var networkType = (networkName && networkName.indexOf('Testnet') === -1) ? 'mainnet' : 'testnet';
+            // Determine network type - must match private key tab logic exactly
+            var networkType = (networkName && networkName.indexOf('Testnet') === -1 && 
+                              network === libs.bitcoin.networks.bitcoin) ? 'mainnet' : 'testnet';
             var serverUrl = DOM.arkServerUrlMnemonic.val();
             
             // Use SDK to generate the address
