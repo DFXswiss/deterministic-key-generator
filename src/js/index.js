@@ -1381,70 +1381,86 @@
     }
 
     function displaySingleAddress() {
-        // Parse the derivation path from the input
-        var path = DOM.derivationPathInput.val();
+        // Show pending while calculating
+        showPending();
         
-        // Parse the path to get the final index
-        var pathParts = path.replace("m/", "").split("/");
-        var currentKey = bip32ExtendedKey;
-        
-        // Derive the key for the given path
-        for (var i = 0; i < pathParts.length; i++) {
-            var part = pathParts[i];
-            var hardened = part.endsWith("'");
-            var index = parseInt(hardened ? part.slice(0, -1) : part);
+        // Use setTimeout to allow UI to update
+        setTimeout(function() {
+            try {
+                // Parse the derivation path from the input
+                var path = DOM.derivationPathInput.val();
+                
+                // Parse the path to get the final index
+                var pathParts = path.replace("m/", "").split("/");
+                var currentKey = bip32ExtendedKey;
+                
+                // Derive the key for the given path
+                for (var i = 0; i < pathParts.length; i++) {
+                    var part = pathParts[i];
+                    var hardened = part.endsWith("'");
+                    var index = parseInt(hardened ? part.slice(0, -1) : part);
+                    
+                    if (hardened) {
+                        currentKey = currentKey.deriveHardened(index);
+                    } else {
+                        currentKey = currentKey.derive(index);
+                    }
+                }
+                
+                // Get the key pair
+                var keyPair = currentKey.keyPair;
+                var useUncompressed = DOM.useBip38.prop("checked");
+                if (useUncompressed) {
+                    keyPair = new libs.bitcoin.ECPair(keyPair.d, null, { network: network, compressed: false });
+                    if(isGRS())
+                        keyPair = new libs.groestlcoinjs.ECPair(keyPair.d, null, { network: network, compressed: false });
+                }
+                
+                // Get private key
+                var hasPrivkey = !currentKey.isNeutered();
+                var privkey = "NA";
+                if (hasPrivkey) {
+                    privkey = keyPair.toWIF();
+                    // BIP38 encode private key if required
+                    if (DOM.useBip38.prop("checked")) {
+                        var bip38password = DOM.bip38Password.val();
+                        if(isGRS())
+                            privkey = libs.groestlcoinjsBip38.encrypt(keyPair.d.toBuffer(), false, bip38password, function(p) {
+                                // Progress update
+                            }, null, networks[DOM.network.val()].name.includes("Testnet"));
+                        else
+                            privkey = libs.bip38.encrypt(keyPair.d.toBuffer(), false, bip38password, function(p) {
+                                // Progress update
+                            });
+                    }
+                }
+                
+                // Get public key
+                var pubkey = keyPair.getPublicKeyBuffer().toString('hex');
+                
+                // Handle special cases for different networks
+                if (networkIsEthereum()) {
+                    var pubkeyBuffer = keyPair.getPublicKeyBuffer();
+                    var ethPubkey = libs.ethUtil.importPublic(pubkeyBuffer);
+                    pubkey = libs.ethUtil.addHexPrefix(pubkey);
+                    if (hasPrivkey) {
+                        privkey = libs.ethUtil.bufferToHex(keyPair.d.toBuffer(32));
+                    }
+                }
+                
+                // Display the keys
+                DOM.privateKeyDisplay.val(privkey);
+                DOM.publicKeyDisplay.val(pubkey);
+                
+            } catch (error) {
+                console.error("Error in displaySingleAddress:", error);
+                DOM.privateKeyDisplay.val("Error: " + error.message);
+                DOM.publicKeyDisplay.val("Error: " + error.message);
+            }
             
-            if (hardened) {
-                currentKey = currentKey.deriveHardened(index);
-            } else {
-                currentKey = currentKey.derive(index);
-            }
-        }
-        
-        // Get the key pair
-        var keyPair = currentKey.keyPair;
-        var useUncompressed = DOM.useBip38.prop("checked");
-        if (useUncompressed) {
-            keyPair = new libs.bitcoin.ECPair(keyPair.d, null, { network: network, compressed: false });
-            if(isGRS())
-                keyPair = new libs.groestlcoinjs.ECPair(keyPair.d, null, { network: network, compressed: false });
-        }
-        
-        // Get private key
-        var hasPrivkey = !currentKey.isNeutered();
-        var privkey = "NA";
-        if (hasPrivkey) {
-            privkey = keyPair.toWIF();
-            // BIP38 encode private key if required
-            if (DOM.useBip38.prop("checked")) {
-                var bip38password = DOM.bip38Password.val();
-                if(isGRS())
-                    privkey = libs.groestlcoinjsBip38.encrypt(keyPair.d.toBuffer(), false, bip38password, function(p) {
-                        // Progress update
-                    }, null, networks[DOM.network.val()].name.includes("Testnet"));
-                else
-                    privkey = libs.bip38.encrypt(keyPair.d.toBuffer(), false, bip38password, function(p) {
-                        // Progress update
-                    });
-            }
-        }
-        
-        // Get public key
-        var pubkey = keyPair.getPublicKeyBuffer().toString('hex');
-        
-        // Handle special cases for different networks
-        if (networkIsEthereum()) {
-            var pubkeyBuffer = keyPair.getPublicKeyBuffer();
-            var ethPubkey = libs.ethUtil.importPublic(pubkeyBuffer);
-            pubkey = libs.ethUtil.addHexPrefix(pubkey);
-            if (hasPrivkey) {
-                privkey = libs.ethUtil.bufferToHex(keyPair.d.toBuffer(32));
-            }
-        }
-        
-        // Display the keys
-        DOM.privateKeyDisplay.val(privkey);
-        DOM.publicKeyDisplay.val(pubkey);
+            // Hide pending when done (always execute)
+            hidePending();
+        }, 50); // Small delay to allow UI to update
     }
 
     function displayAddresses(start, total) {
