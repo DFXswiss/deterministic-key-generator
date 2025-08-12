@@ -1373,8 +1373,8 @@
         $('#more-rows-section').hide();
         // Show Ark-specific interface
         $('#ark-interface').show();
-        // Ensure correct derivation path for Ark (coin type 1237)
-        DOM.derivationPathInput.val("m/44'/1237'/0'/0");
+        // Use standard Bitcoin derivation path (Ark is Layer-2 on Bitcoin)
+        DOM.derivationPathInput.val("m/44'/0'/0'/0");
     }
 
     function showNormalInterface() {
@@ -3109,14 +3109,14 @@
             name: "BTC - Bitcoin Ark",
             onSelect: function() {
                 network = libs.bitcoin.networks.bitcoin;
-                setHdCoin(1237); // Ark coin type as per BIP44
+                setHdCoin(0); // Use Bitcoin coin type (Ark is Layer-2 on Bitcoin)
             },
         },
         {
             name: "BTC - Bitcoin Ark Testnet",
             onSelect: function() {
                 network = libs.bitcoin.networks.testnet;
-                setHdCoin(1237); // Ark coin type as per BIP44
+                setHdCoin(1); // Use Bitcoin testnet coin type
             },
         },
         {
@@ -4558,11 +4558,12 @@
         var networkName = networks[DOM.phraseNetwork.val()].name;
         if (networkName && networkName.includes("Bitcoin Ark")) {
             showArkInterface();
-            // Update derivation path to use Ark coin type (1237)
-            DOM.derivationPathInput.val("m/44'/1237'/0'/0");
+            // Ark uses standard Bitcoin derivation path (it's a Layer-2)
+            var coinType = networkName.includes("Testnet") ? "1" : "0";
+            DOM.derivationPathInput.val("m/44'/" + coinType + "'/0'/0");
         } else {
             showNormalInterface();
-            // Reset to default Bitcoin path
+            // Reset to default path for other networks
             DOM.derivationPathInput.val("m/44'/0'/0'/0");
         }
     });
