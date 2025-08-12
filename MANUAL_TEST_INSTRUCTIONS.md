@@ -15,8 +15,7 @@
 
 **Expected Results:**
 - Public Key: `03fa0d588d1afebe820db2f2cf503050ef0ca55e8ea8c4098fa7961c91959a496d`
-- Standard Ark Address: `tark1q8aq6kydrtltaqsdktev75ps2rhsef27365vgzv057tpeyv4nfyk6nx0k32`
-- Protocol VTXO Address: `tark1qra883hysahlkt0ujcwhv0x2n278849c3m7t3a08l7fdc40f4f2nmr7aax9rt24j6nygp6rsmdgqnqk3ld5qpnymcyfp0n46w63vt6twj24hvy`
+- Ark Address: `tark1qra883hysahlkt0ujcwhv0x2n278849c3m7t3a08l7fdc40f4f2nmr7aax9rt24j6nygp6rsmdgqnqk3ld5qpnymcyfp0n46w63vt6twj24hvy`
 - VTXO Taproot Key: `8fdde98a35aab2d4c880e870db500982d1fb6800cc9bc11217ceba76a2c5e96e`
 - Server Pubkey: `03fa73c6e4876ffb2dfc961d763cca9abc73d4b88efcb8f5e7ff92dc55e9aa553d`
 - Exit Delay: `172544 seconds`
@@ -29,7 +28,7 @@
 5. Click "GENERATE" or press Enter
 
 **Expected Results:**
-- Protocol VTXO Address: `tark1qra883hysahlkt0ujcwhv0x2n278849c3m7t3a08l7fdc40f4f2nm8e5wfwmqqrm6yt30d2quacr9t3svg4qk6q7a5jewvp7yjep0z2gtpj3fd`
+- Ark Address: `tark1qra883hysahlkt0ujcwhv0x2n278849c3m7t3a08l7fdc40f4f2nm8e5wfwmqqrm6yt30d2quacr9t3svg4qk6q7a5jewvp7yjep0z2gtpj3fd`
 - VTXO Taproot Key: `9f34725db0007bd11717b540e77032ae30622a0b681eed2597303e24b2178948`
 
 ### Test 3: Hex Format
@@ -48,7 +47,7 @@
 - [ ] WIF format works as before
 - [ ] Hex format (64 characters) works
 - [ ] Server info is automatically fetched when Ark Testnet is selected
-- [ ] Protocol VTXO Address matches expected value
+- [ ] Ark Address matches expected value
 - [ ] VTXO Taproot Key matches expected value
 - [ ] Exit Delay shows "172544 seconds" (not blocks)
 - [ ] All Ark-specific fields are visible when Ark Testnet is selected
@@ -61,6 +60,6 @@
 
 ## Success Criteria
 
-✅ All three input formats (nsec, WIF, hex) produce the correct Protocol VTXO Address
+✅ All three input formats (nsec, WIF, hex) produce the correct Ark Address
 ✅ The VTXO Taproot Key matches the expected value
 ✅ Server parameters are automatically fetched and displayed
