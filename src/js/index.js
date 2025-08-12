@@ -1619,6 +1619,25 @@
                 if (!self.shouldGenerate) {
                     return;
                 }
+                
+                // Check if this is an Ark network in mnemonic tab
+                // Ark addresses require special server parameters that are only available in private key tab
+                var networkName = networks[DOM.network.val()].name;
+                if (networkName && networkName.includes("Bitcoin Ark")) {
+                    // Skip address generation for Ark networks in mnemonic tab
+                    // These addresses would be invalid without proper server parameters
+                    var indexText = getDerivationPath() + "/" + index;
+                    if (useHardenedAddresses) {
+                        indexText = indexText + "'";
+                    }
+                    addAddressToList(indexText, "Use Private Key tab for Ark addresses", "", "");
+                    if (isLast) {
+                        hidePending();
+                        updateCsv();
+                    }
+                    return;
+                }
+                
                 // derive HDkey for this row of the table
                 var key = "NA";
                 if (useHardenedAddresses) {
