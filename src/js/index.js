@@ -1373,6 +1373,8 @@
         $('#more-rows-section').hide();
         // Show Ark-specific interface
         $('#ark-interface').show();
+        // Ensure correct derivation path for Ark (coin type 1237)
+        DOM.derivationPathInput.val("m/44'/1237'/0'/0");
     }
 
     function showNormalInterface() {
@@ -4556,8 +4558,12 @@
         var networkName = networks[DOM.phraseNetwork.val()].name;
         if (networkName && networkName.includes("Bitcoin Ark")) {
             showArkInterface();
+            // Update derivation path to use Ark coin type (1237)
+            DOM.derivationPathInput.val("m/44'/1237'/0'/0");
         } else {
             showNormalInterface();
+            // Reset to default Bitcoin path
+            DOM.derivationPathInput.val("m/44'/0'/0'/0");
         }
     });
 
