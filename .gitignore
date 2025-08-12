@@ -32,4 +32,7 @@ Thumbs.db
 # Local development
 .env
 .env.local
-EOF < /dev/null
+
+# Demo projects
+ark-key-generator/
+spark-wallet-demo/
