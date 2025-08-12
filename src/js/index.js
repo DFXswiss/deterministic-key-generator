@@ -137,6 +137,11 @@
     DOM.derivationPathInput = $("#derivation-path-input");
     DOM.privateKeyDisplay = $("#private-key-display");
     DOM.publicKeyDisplay = $("#public-key-display");
+    DOM.arkAddressDisplay = $("#ark-address-display");
+    DOM.arkServerUrlMnemonic = $("#ark-server-url-mnemonic");
+    DOM.arkServerPubkeyMnemonic = $("#ark-server-pubkey-mnemonic");
+    DOM.arkExitDelayMnemonic = $("#ark-exit-delay-mnemonic");
+    DOM.arkVtxoKeyMnemonic = $("#ark-vtxo-key-mnemonic");
     DOM.csvTab = $("#csv-tab a");
     DOM.csv = $(".csv");
     DOM.rowsToAdd = $(".rows-to-add");
@@ -1452,15 +1457,103 @@
                 DOM.privateKeyDisplay.val(privkey);
                 DOM.publicKeyDisplay.val(pubkey);
                 
+                // Generate Ark address for Ark networks
+                var networkName = networks[DOM.network.val()].name;
+                if (networkName === "BTC - Bitcoin Ark Testnet" || networkName === "BTC - Bitcoin Ark") {
+                    generateArkAddressForMnemonic(keyPair, networkName);
+                } else {
+                    // Clear Ark fields for non-Ark networks
+                    DOM.arkAddressDisplay.val("");
+                    DOM.arkServerUrlMnemonic.val("");
+                    DOM.arkServerPubkeyMnemonic.val("");
+                    DOM.arkExitDelayMnemonic.val("");
+                    DOM.arkVtxoKeyMnemonic.val("");
+                }
+                
             } catch (error) {
                 console.error("Error in displaySingleAddress:", error);
                 DOM.privateKeyDisplay.val("Error: " + error.message);
                 DOM.publicKeyDisplay.val("Error: " + error.message);
+                DOM.arkAddressDisplay.val("Error: " + error.message);
             }
             
             // Hide pending when done (always execute)
             hidePending();
         }, 50); // Small delay to allow UI to update
+    }
+
+    function generateArkAddressForMnemonic(keyPair, networkName) {
+        // Get user's public key
+        var userPubkey = keyPair.getPublicKeyBuffer();
+        var pubkeyHex = userPubkey.toString('hex');
+        
+        // Set server URL based on network
+        var defaultServerUrl = networkName === "BTC - Bitcoin Ark" ? 'https://bitcoin-beta.arkade.sh' : 'https://mutinynet.arkade.sh';
+        DOM.arkServerUrlMnemonic.val(defaultServerUrl);
+        
+        // Try to fetch server info and generate address
+        if (window.ArkSDK && window.ArkSDK.fetchServerInfo) {
+            window.ArkSDK.fetchServerInfo(defaultServerUrl).then(function(serverInfo) {
+                // Display server info
+                DOM.arkServerPubkeyMnemonic.val(serverInfo.signerPubkey || '');
+                DOM.arkExitDelayMnemonic.val(serverInfo.unilateralExitDelay || '');
+                
+                // Generate Ark address
+                generateArkAddressWithServerInfo(userPubkey, pubkeyHex, serverInfo, networkName);
+            }).catch(function(error) {
+                console.error('Failed to fetch server info via SDK:', error);
+                DOM.arkAddressDisplay.val("Error fetching server info: " + error.message);
+            });
+        } else {
+            // Fallback to jQuery AJAX
+            $.ajax({
+                url: defaultServerUrl + '/v1/info',
+                method: 'GET',
+                success: function(serverInfo) {
+                    // Display server info
+                    DOM.arkServerPubkeyMnemonic.val(serverInfo.signerPubkey || '');
+                    DOM.arkExitDelayMnemonic.val(serverInfo.unilateralExitDelay || '');
+                    
+                    // Generate Ark address
+                    generateArkAddressWithServerInfo(userPubkey, pubkeyHex, serverInfo, networkName);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to fetch server info via AJAX:', error);
+                    DOM.arkAddressDisplay.val("Error fetching server info: " + error);
+                }
+            });
+        }
+    }
+
+    async function generateArkAddressWithServerInfo(userPubkey, pubkeyHex, serverInfo, networkName) {
+        try {
+            // Check if SDK is available
+            if (typeof window.ArkSDK === 'undefined' || !window.ArkSDK.generateArkProtocolAddress) {
+                throw new Error('Ark SDK not loaded. Please refresh the page.');
+            }
+            
+            // Determine network type
+            var networkType = (networkName && networkName.indexOf('Testnet') === -1) ? 'mainnet' : 'testnet';
+            var serverUrl = DOM.arkServerUrlMnemonic.val();
+            
+            // Use SDK to generate the address
+            var result = await window.ArkSDK.generateArkProtocolAddress(
+                pubkeyHex,
+                serverUrl,
+                networkType
+            );
+            
+            if (result.success) {
+                DOM.arkAddressDisplay.val(result.address);
+                DOM.arkVtxoKeyMnemonic.val(result.vtxoKey || '');
+            } else {
+                DOM.arkAddressDisplay.val("Error: " + (result.error || 'Failed to generate Ark address'));
+            }
+            
+        } catch (error) {
+            console.error('Error generating Ark address:', error);
+            DOM.arkAddressDisplay.val("Error: " + error.message);
+        }
     }
 
     function displayAddresses(start, total) {
