@@ -1633,7 +1633,8 @@
                                     if ((searchParam === 'btc' && optionText.includes('btc - bitcoin') && !optionText.includes('testnet') && !optionText.includes('ark')) ||
                                         (searchParam === 'bitcoin' && optionText === 'btc - bitcoin') ||
                                         (searchParam === 'btc testnet' && optionText === 'btc - bitcoin testnet') ||
-                                        (searchParam === 'ark' && optionText === 'btc - bitcoin ark testnet') ||
+                                        (searchParam === 'ark testnet' && optionText === 'btc - bitcoin ark testnet') ||
+                                        (searchParam === 'ark' && optionText === 'btc - bitcoin ark' && !optionText.includes('testnet')) ||
                                         (searchParam === 'eth' && optionText.includes('eth - ethereum')) ||
                                         (searchParam === 'ltc' && optionText.includes('ltc - litecoin'))) {
                                         $(selector).val(optionValue).trigger('change');
@@ -2300,7 +2301,8 @@
                             // If server info not fetched, fetch it now
                             if (!serverPubkey && serverUrl) {
                                 console.log('Auto-fetching server info from:', serverUrl);
-                                // Use the SDK wrapper to fetch server info
+                                
+                                // First try with SDK
                                 if (window.ArkSDK && window.ArkSDK.fetchServerInfo) {
                                     window.ArkSDK.fetchServerInfo(serverUrl).then(function(serverInfo) {
                                         $('#ark-server-pubkey').val(serverInfo.signerPubkey || '');
@@ -2312,17 +2314,48 @@
                                         generateArkAddressesWithServerInfo(userPubkey, pubkey, keyPair, serverInfo, networkName, bitcoinNetwork);
                                     }).catch(function(error) {
                                         console.error('Failed to fetch server info via SDK:', error);
-                                        // Continue without server info
-                                        generateArkAddressesWithServerInfo(userPubkey, pubkey, keyPair, null, networkName, bitcoinNetwork);
+                                        // Fallback to jQuery AJAX
+                                        fetchServerInfoViaAjax(serverUrl, function(serverInfo) {
+                                            generateArkAddressesWithServerInfo(userPubkey, pubkey, keyPair, serverInfo, networkName, bitcoinNetwork);
+                                        });
                                     });
                                     return; // Exit here, continue in callback
                                 } else {
-                                    console.error('ArkSDK.fetchServerInfo not available');
+                                    // SDK not available, use jQuery AJAX directly
+                                    fetchServerInfoViaAjax(serverUrl, function(serverInfo) {
+                                        generateArkAddressesWithServerInfo(userPubkey, pubkey, keyPair, serverInfo, networkName, bitcoinNetwork);
+                                    });
+                                    return;
                                 }
                             }
                             
-                            // Generate addresses with current server info (if available)
-                            generateArkAddressesWithServerInfo(userPubkey, pubkey, keyPair, null, networkName, bitcoinNetwork);
+                            // Only generate if we already have server info
+                            if (serverPubkey && exitDelay) {
+                                generateArkAddressesWithServerInfo(userPubkey, pubkey, keyPair, null, networkName, bitcoinNetwork);
+                            } else {
+                                console.error('Cannot generate Ark address without server info');
+                                $('#private-key-error').removeClass('hidden').text('Server info required for Ark addresses. Please wait or click "Fetch Info".');
+                            }
+                        }
+                        
+                        // Helper function to fetch server info via AJAX
+                        function fetchServerInfoViaAjax(serverUrl, callback) {
+                            $.ajax({
+                                url: serverUrl + '/v1/info',
+                                method: 'GET',
+                                success: function(serverInfo) {
+                                    $('#ark-server-pubkey').val(serverInfo.signerPubkey || '');
+                                    $('#ark-exit-delay').val(serverInfo.unilateralExitDelay || '');
+                                    $('#ark-network').val(serverInfo.network || '');
+                                    console.log('Server info fetched successfully via AJAX');
+                                    callback(serverInfo);
+                                },
+                                error: function(xhr, status, error) {
+                                    console.error('Failed to fetch server info via AJAX:', error);
+                                    $('#private-key-error').removeClass('hidden').text('Failed to fetch server info. Please try again or enter manually.');
+                                    callback(null);
+                                }
+                            });
                         }
                         
                         // Helper function to generate Ark addresses with server info
