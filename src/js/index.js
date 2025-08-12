@@ -301,7 +301,11 @@
             seedChanged()
         }
         else {
-            rootKeyChanged();
+            // Only process root key if it exists
+            var rootKeyBase58 = DOM.rootKey.val();
+            if (rootKeyBase58 && rootKeyBase58.trim() !== "") {
+                rootKeyChanged();
+            }
         }
     }
 
@@ -574,6 +578,13 @@
         showPending();
         hideValidationError();
         var rootKeyBase58 = DOM.rootKey.val();
+        // Skip validation if root key is empty
+        if (!rootKeyBase58 || rootKeyBase58.trim() === "") {
+            clearDerivedKeys();
+            clearAddressesList();
+            hidePending();
+            return;
+        }
         var errorText = validateRootKey(rootKeyBase58);
         if (errorText) {
             showValidationError(errorText);
@@ -2093,6 +2104,11 @@
     function populateNetworkSelect() {
         for (var i=0; i<networks.length; i++) {
             var network = networks[i];
+            // Skip Ark networks in mnemonic tab - they require special handling
+            // that only works in the private key tab
+            if (network.name.includes("Bitcoin Ark")) {
+                continue;
+            }
             var option = $("<option>");
             option.attr("value", i);
             option.text(network.name);
