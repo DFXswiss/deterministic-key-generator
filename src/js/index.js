@@ -134,6 +134,9 @@
     DOM.useBip38 = $(".use-bip38");
     DOM.bip38Password = $(".bip38-password");
     DOM.addresses = $(".addresses");
+    DOM.derivationPathInput = $("#derivation-path-input");
+    DOM.privateKeyDisplay = $("#private-key-display");
+    DOM.publicKeyDisplay = $("#public-key-display");
     DOM.csvTab = $("#csv-tab a");
     DOM.csv = $(".csv");
     DOM.rowsToAdd = $(".rows-to-add");
@@ -1340,14 +1343,66 @@
         DOM.extendedPrivKey.val(extendedPrivKey);
         var extendedPubKey = bip32ExtendedKey.neutered().toBase58();
         DOM.extendedPubKey.val(extendedPubKey);
-        // Display the addresses and privkeys
+        // Display the single address for the path
         clearAddressesList();
-        var initialAddressCount = parseInt(DOM.rowsToAdd.val());
-        displayAddresses(0, initialAddressCount);
+        displaySingleAddress();
 
         if (isELA()) {
             displayBip32InfoForELA();
         }
+    }
+
+    function displaySingleAddress() {
+        // Parse the derivation path from the input
+        var path = DOM.derivationPathInput.val();
+        
+        // Check if this is an Ark network
+        var networkName = networks[DOM.network.val()].name;
+        if (networkName && networkName.includes("Bitcoin Ark")) {
+            DOM.privateKeyDisplay.val("Use Private Key tab for Ark addresses");
+            DOM.publicKeyDisplay.val("Use Private Key tab for Ark addresses");
+            return;
+        }
+        
+        // Parse the path to get the final index
+        var pathParts = path.replace("m/", "").split("/");
+        var currentKey = bip32ExtendedKey;
+        
+        // Derive the key for the given path
+        for (var i = 0; i < pathParts.length; i++) {
+            var part = pathParts[i];
+            var hardened = part.endsWith("'");
+            var index = parseInt(hardened ? part.slice(0, -1) : part);
+            
+            if (hardened) {
+                currentKey = currentKey.deriveHardened(index);
+            } else {
+                currentKey = currentKey.derive(index);
+            }
+        }
+        
+        // Get the key pair
+        var keyPair = currentKey.keyPair;
+        var useUncompressed = DOM.useBip38.prop("checked");
+        if (useUncompressed) {
+            keyPair = new libs.bitcoin.ECPair(keyPair.d, null, { network: network, compressed: false });
+            if(isGRS())
+                keyPair = new libs.groestlcoinjs.ECPair(keyPair.d, null, { network: network, compressed: false });
+        }
+        
+        // Get private key
+        var hasPrivkey = !currentKey.isNeutered();
+        var privkey = "NA";
+        if (hasPrivkey) {
+            privkey = keyPair.toWIF();
+        }
+        
+        // Get public key
+        var pubkey = keyPair.getPublicKeyBuffer().toString('hex');
+        
+        // Display the keys
+        DOM.privateKeyDisplay.val(privkey);
+        DOM.publicKeyDisplay.val(pubkey);
     }
 
     function displayAddresses(start, total) {
@@ -4310,10 +4365,9 @@
         DOM.extendedPrivKey.val(libs.elastosjs.getBip32ExtendedPrivateKey(seed, coin, account, change));
         DOM.extendedPubKey.val(libs.elastosjs.getBip32ExtendedPublicKey(seed, coin, account, change));
 
-        // Display the addresses and privkeys
+        // Display the single address for the path
         clearAddressesList();
-        var initialAddressCount = parseInt(DOM.rowsToAdd.val());
-        displayAddresses(0, initialAddressCount);
+        displaySingleAddress();
     }
 
     function calcAddressForELA(seed, coin, account, change, index) {
@@ -4329,6 +4383,13 @@
         };
     }
     // ELA - Elastos functions - end
+
+    // Add event handler for derivation path input
+    DOM.derivationPathInput.on('input', function() {
+        if (DOM.phrase.val() || DOM.rootKey.val()) {
+            displaySingleAddress();
+        }
+    });
 
     init();
     
