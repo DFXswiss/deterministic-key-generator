@@ -2104,11 +2104,6 @@
     function populateNetworkSelect() {
         for (var i=0; i<networks.length; i++) {
             var network = networks[i];
-            // Skip Ark networks in mnemonic tab - they require special handling
-            // that only works in the private key tab
-            if (network.name.includes("Bitcoin Ark")) {
-                continue;
-            }
             var option = $("<option>");
             option.attr("value", i);
             option.text(network.name);

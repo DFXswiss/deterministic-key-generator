@@ -1698,17 +1698,6 @@
                                 $('#network-private-key').append(newOption);
                             }
                         });
-                        
-                        // Now add Ark networks (they only work in private key tab)
-                        // Find the indices for Ark networks
-                        if (typeof networks !== 'undefined') {
-                            for (var i = 0; i < networks.length; i++) {
-                                if (networks[i].name && networks[i].name.includes("Bitcoin Ark")) {
-                                    var arkOption = new Option(networks[i].name, i);
-                                    $('#network-private-key').append(arkOption);
-                                }
-                            }
-                        }
                         // Trigger change event to show/hide appropriate options
                         $('#network-private-key').trigger('change');
                         return true;
