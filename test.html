@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ark Protocol Test Page</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5; 
+        }
+        .test-container { 
+            background: white; 
+            padding: 20px; 
+            margin: 10px 0; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+        }
+        .test-result { 
+            margin: 10px 0; 
+            padding: 10px; 
+            border-radius: 4px; 
+        }
+        .pass { background: #d4edda; color: #155724; }
+        .fail { background: #f8d7da; color: #721c24; }
+        .pending { background: #fff3cd; color: #856404; }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin: 5px 0;
+        }
+        button:hover { background: #0056b3; }
+        .code { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 4px; 
+            font-family: monospace; 
+            white-space: pre-wrap; 
+        }
+        .loading { 
+            color: #666; 
+            font-style: italic; 
+        }
+        .error { 
+            background: #f8d7da; 
+            color: #721c24; 
+            padding: 10px; 
+            border-radius: 4px; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Ark Protocol Address Generation Test</h1>
+    <p>This page tests the Ark Protocol address generation functionality.</p>
+    
+    <div class="test-container">
+        <h2>Test Cases</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+        
+        <div id="test-results"></div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Manual Test</h2>
+        <p>Use this to test specific private keys:</p>
+        <input type="text" id="manual-key" placeholder="Enter private key (nsec, WIF, or hex)" style="width: 400px; padding: 8px;">
+        <button onclick="testManualKey()">Test Key</button>
+        <div id="manual-result"></div>
+    </div>
+
+    <script src="dist/ark-sdk-bundle.js"></script>
+    <script src="src/js/ark-sdk-wrapper.js"></script>
+    
+    <script>
+        // Test cases
+        const testCases = [
+            {
+                name: 'nsec format test',
+                privateKey: 'nsec1kk0aks7njd72wy2adjrc4qqx4dd5alzjpuvmku8urnx8ljqrwusqzus34y',
+                expectedProtocolAddress: 'tark1qra883hysahlkt0ujcwhv0x2n278849c3m7t3a08l7fdc40f4f2nmr7aax9rt24j6nygp6rsmdgqnqk3ld5qpnymcyfp0n46w63vt6twj24hvy',
+                expectedVtxoKey: '8fdde98a35aab2d4c880e870db500982d1fb6800cc9bc11217ceba76a2c5e96e'
+            },
+            {
+                name: 'WIF format test', 
+                privateKey: 'KxJFqytJx5vuzMMxv9mjPGW88n8t4P6ywfJJ78UfR9AsV5XaD4fH',
+                expectedProtocolAddress: 'tark1qra883hysahlkt0ujcwhv0x2n278849c3m7t3a08l7fdc40f4f2nm8e5wfwmqqrm6yt30d2quacr9t3svg4qk6q7a5jewvp7yjep0z2gtpj3fd',
+                expectedVtxoKey: '9f34725db0007bd11717b540e77032ae30622a0b681eed2597303e24b2178948'
+            }
+        ];
+        
+        function clearResults() {
+            document.getElementById('test-results').innerHTML = '';
+            document.getElementById('manual-result').innerHTML = '';
+        }
+        
+        function addResult(testName, status, message, details = {}) {
+            const resultsDiv = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${status}`;
+            
+            let html = `<strong>${testName}</strong>: ${message}`;
+            
+            if (details.generated && details.expected) {
+                html += `<div class="code">Expected: ${details.expected}</div>`;
+                html += `<div class="code">Generated: ${details.generated}</div>`;
+            }
+            
+            if (details.error) {
+                html += `<div class="error">Error: ${details.error}</div>`;
+            }
+            
+            resultDiv.innerHTML = html;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        async function testPrivateKey(privateKey, expectedAddress, expectedVtxoKey) {
+            try {
+                // Convert nsec to hex if needed
+                let hexKey = privateKey;
+                if (privateKey.startsWith('nsec1')) {
+                    // Inline bech32 decoding (same as in index.html)
+                    var CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+                    var GENERATOR = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+                    
+                    function bech32Polymod(values) {
+                        var chk = 1;
+                        for (var i = 0; i < values.length; ++i) {
+                            var b = chk >> 25;
+                            chk = ((chk & 0x1ffffff) << 5) ^ values[i];
+                            for (var j = 0; j < 5; ++j) {
+                                if ((b >> j) & 1) chk ^= GENERATOR[j];
+                            }
+                        }
+                        return chk;
+                    }
+                    
+                    function bech32Decode(bech) {
+                        var pos = bech.lastIndexOf('1');
+                        var data = [];
+                        for (var i = pos + 1; i < bech.length; ++i) {
+                            var d = CHARSET.indexOf(bech.charAt(i));
+                            if (d === -1) return null;
+                            data.push(d);
+                        }
+                        
+                        var hrpData = [];
+                        for (var i = 0; i < pos; ++i) {
+                            hrpData.push(bech.charCodeAt(i) >> 5);
+                        }
+                        hrpData.push(0);
+                        for (var i = 0; i < pos; ++i) {
+                            hrpData.push(bech.charCodeAt(i) & 31);
+                        }
+                        
+                        if (bech32Polymod(hrpData.concat(data)) !== 1) return null;
+                        return data.slice(0, -6);
+                    }
+                    
+                    function convertBits(data, fromBits, toBits) {
+                        var acc = 0, bits = 0, ret = [], maxv = (1 << toBits) - 1;
+                        for (var i = 0; i < data.length; ++i) {
+                            var v = data[i];
+                            if (v < 0 || (v >> fromBits) !== 0) return null;
+                            acc = (acc << fromBits) | v;
+                            bits += fromBits;
+                            while (bits >= toBits) {
+                                bits -= toBits;
+                                ret.push((acc >> bits) & maxv);
+                            }
+                        }
+                        if (bits > 0) {
+                            ret.push((acc << (toBits - bits)) & maxv);
+                        }
+                        return new Uint8Array(ret.slice(0, -1));
+                    }
+                    
+                    try {
+                        var decoded = bech32Decode(privateKey);
+                        if (decoded) {
+                            var keyBytes = convertBits(decoded, 5, 8);
+                            if (keyBytes && keyBytes.length === 32) {
+                                hexKey = Array.from(keyBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+                            }
+                        }
+                    } catch (e) {
+                        throw new Error('Failed to decode nsec key: ' + e.message);
+                    }
+                }
+                
+                // Test with ark-sdk-wrapper
+                if (typeof window.generateArkProtocolAddressManual === 'function') {
+                    const result = await window.generateArkProtocolAddressManual(hexKey, 'https://mutinynet.arkade.sh', 'testnet');
+                    return {
+                        success: true,
+                        protocolAddress: result.protocolAddress,
+                        vtxoKey: result.vtxoTaprootKey,
+                        serverInfo: result.serverInfo
+                    };
+                } else {
+                    throw new Error('Ark SDK wrapper not available');
+                }
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+        
+        async function runAllTests() {
+            clearResults();
+            addResult('Test Status', 'pending', 'Starting tests...');
+            
+            for (const testCase of testCases) {
+                addResult(testCase.name, 'pending', 'Running...');
+                
+                const result = await testPrivateKey(
+                    testCase.privateKey, 
+                    testCase.expectedProtocolAddress,
+                    testCase.expectedVtxoKey
+                );
+                
+                if (result.success) {
+                    const addressMatch = result.protocolAddress === testCase.expectedProtocolAddress;
+                    const vtxoMatch = result.vtxoKey === testCase.expectedVtxoKey;
+                    const allMatch = addressMatch && vtxoMatch;
+                    
+                    addResult(
+                        testCase.name, 
+                        allMatch ? 'pass' : 'fail',
+                        allMatch ? 'PASSED' : 'FAILED',
+                        {
+                            generated: `Address: ${result.protocolAddress}, VTXO: ${result.vtxoKey}`,
+                            expected: `Address: ${testCase.expectedProtocolAddress}, VTXO: ${testCase.expectedVtxoKey}`
+                        }
+                    );
+                } else {
+                    addResult(testCase.name, 'fail', 'ERROR', { error: result.error });
+                }
+            }
+            
+            addResult('Test Status', 'pass', 'All tests completed');
+        }
+        
+        async function testManualKey() {
+            const manualKey = document.getElementById('manual-key').value.trim();
+            if (!manualKey) {
+                document.getElementById('manual-result').innerHTML = '<div class="error">Please enter a private key</div>';
+                return;
+            }
+            
+            document.getElementById('manual-result').innerHTML = '<div class="loading">Testing...</div>';
+            
+            const result = await testPrivateKey(manualKey);
+            
+            if (result.success) {
+                document.getElementById('manual-result').innerHTML = `
+                    <div class="test-result pass">
+                        <strong>Generated Successfully</strong><br>
+                        Protocol Address: <code>${result.protocolAddress}</code><br>
+                        VTXO Key: <code>${result.vtxoKey}</code><br>
+                        Server: <code>${result.serverInfo?.signerPubkey}</code><br>
+                        Exit Delay: <code>${result.serverInfo?.unilateralExitDelay} seconds</code>
+                    </div>
+                `;
+            } else {
+                document.getElementById('manual-result').innerHTML = `
+                    <div class="test-result fail">
+                        <strong>Error:</strong> ${result.error}
+                    </div>
+                `;
+            }
+        }
+        
+        // Check if SDK is loaded
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                if (typeof window.generateArkProtocolAddressManual === 'function') {
+                    addResult('SDK Status', 'pass', 'Ark SDK loaded successfully');
+                } else {
+                    addResult('SDK Status', 'fail', 'Ark SDK not available');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

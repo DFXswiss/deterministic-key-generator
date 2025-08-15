@@ -69,6 +69,7 @@
     DOM.bip44tab = $("#bip44-tab");
     DOM.bip49tab = $("#bip49-tab");
     DOM.bip84tab = $("#bip84-tab");
+    DOM.bip86tab = $("#bip86-tab");
     DOM.bip141tab = $("#bip141-tab");
     DOM.ldstab = $("#lds-tab");
     DOM.bip32panel = $("#bip32");
@@ -100,6 +101,15 @@
     DOM.bip84accountXprv = $("#bip84 .account-xprv");
     DOM.bip84accountXpub = $("#bip84 .account-xpub");
     DOM.bip84change = $("#bip84 .change");
+    DOM.bip86unavailable = $("#bip86 .unavailable");
+    DOM.bip86available = $("#bip86 .available");
+    DOM.bip86path = $("#bip86-path");
+    DOM.bip86purpose = $("#bip86 .purpose");
+    DOM.bip86coin = $("#bip86 .coin");
+    DOM.bip86account = $("#bip86 .account");
+    DOM.bip86accountXprv = $("#bip86 .account-xprv");
+    DOM.bip86accountXpub = $("#bip86 .account-xpub");
+    DOM.bip86change = $("#bip86 .change");
     DOM.bip85 = $('.bip85');
     DOM.showBip85 = $('.showBip85');
     DOM.bip85Field = $('.bip85Field');
@@ -124,6 +134,14 @@
     DOM.useBip38 = $(".use-bip38");
     DOM.bip38Password = $(".bip38-password");
     DOM.addresses = $(".addresses");
+    DOM.derivationPathInput = $("#derivation-path-input");
+    DOM.privateKeyDisplay = $("#private-key-display");
+    DOM.publicKeyDisplay = $("#public-key-display");
+    DOM.arkAddressDisplay = $("#ark-address-display");
+    DOM.arkServerUrlMnemonic = $("#ark-server-url-mnemonic");
+    DOM.arkServerPubkeyMnemonic = $("#ark-server-pubkey-mnemonic");
+    DOM.arkExitDelayMnemonic = $("#ark-exit-delay-mnemonic");
+    DOM.arkVtxoKeyMnemonic = $("#ark-vtxo-key-mnemonic");
     DOM.csvTab = $("#csv-tab a");
     DOM.csv = $(".csv");
     DOM.rowsToAdd = $(".rows-to-add");
@@ -184,6 +202,8 @@
         DOM.bip49change.on("input", calcForDerivationPath);
         DOM.bip84account.on("input", calcForDerivationPath);
         DOM.bip84change.on("input", calcForDerivationPath);
+        DOM.bip86account.on("input", calcForDerivationPath);
+        DOM.bip86change.on("input", calcForDerivationPath);
         DOM.bip85application.on('input', calcBip85);
         DOM.bip85mnemonicLanguage.on('change', calcBip85);
         DOM.bip85mnemonicLength.on('change', calcBip85);
@@ -289,7 +309,11 @@
             seedChanged()
         }
         else {
-            rootKeyChanged();
+            // Only process root key if it exists
+            var rootKeyBase58 = DOM.rootKey.val();
+            if (rootKeyBase58 && rootKeyBase58.trim() !== "") {
+                rootKeyChanged();
+            }
         }
     }
 
@@ -562,6 +586,13 @@
         showPending();
         hideValidationError();
         var rootKeyBase58 = DOM.rootKey.val();
+        // Skip validation if root key is empty
+        if (!rootKeyBase58 || rootKeyBase58.trim() === "") {
+            clearDerivedKeys();
+            clearAddressesList();
+            hidePending();
+            return;
+        }
         var errorText = validateRootKey(rootKeyBase58);
         if (errorText) {
             showValidationError(errorText);
@@ -694,6 +725,9 @@
         }
         else if (bip84TabSelected()) {
             displayBip84Info();
+        }
+        else if (bip86TabSelected()) {
+            displayBip86Info();
         }
         displayBip32Info();
     }
@@ -951,7 +985,7 @@
             var word = words[i];
             var language = getLanguage();
             if (WORDLISTS[language].indexOf(word) == -1) {
-                console.log("Finding closest match to " + word);
+                // Finding closest match to word
                 var nearestWord = findNearestWord(word);
                 return word + " not in wordlist, did you mean " + nearestWord + "?";
             }
@@ -1101,7 +1135,7 @@
             path += change;
             DOM.bip44path.val(path);
             var derivationPath = DOM.bip44path.val();
-            console.log("Using derivation path from BIP44 tab: " + derivationPath);
+            // Using derivation path from BIP44 tab
             return derivationPath;
         }
         else if (bip49TabSelected()) {
@@ -1116,7 +1150,7 @@
             path += change;
             DOM.bip49path.val(path);
             var derivationPath = DOM.bip49path.val();
-            console.log("Using derivation path from BIP49 tab: " + derivationPath);
+            // Using derivation path from BIP49 tab
             return derivationPath;
         }
         else if (bip84TabSelected()) {
@@ -1131,24 +1165,39 @@
             path += change;
             DOM.bip84path.val(path);
             var derivationPath = DOM.bip84path.val();
-            console.log("Using derivation path from BIP84 tab: " + derivationPath);
+            // Using derivation path from BIP84 tab
+            return derivationPath;
+        }
+        else if (bip86TabSelected()) {
+            var purpose = parseIntNoNaN(DOM.bip86purpose.val(), 86);
+            var coin = parseIntNoNaN(DOM.bip86coin.val(), 0);
+            var account = parseIntNoNaN(DOM.bip86account.val(), 0);
+            var change = parseIntNoNaN(DOM.bip86change.val(), 0);
+            var path = "m/";
+            path += purpose + "'/";
+            path += coin + "'/";
+            path += account + "'/";
+            path += change;
+            DOM.bip86path.val(path);
+            var derivationPath = DOM.bip86path.val();
+            // Using derivation path from BIP86 tab
             return derivationPath;
         }
         else if (bip32TabSelected()) {
             var derivationPath = DOM.bip32path.val();
-            console.log("Using derivation path from BIP32 tab: " + derivationPath);
+            // Using derivation path from BIP32 tab
             return derivationPath;
         }
         else if (bip141TabSelected()) {
             var derivationPath = DOM.bip141path.val();
-            console.log("Using derivation path from BIP141 tab: " + derivationPath);
+            // Using derivation path from BIP141 tab
             return derivationPath;
         }
         else if (ldsTabSelected()) {
             return ldsWallet.getDerivationPath();
         }
         else {
-            console.log("Unknown derivation path");
+            // Unknown derivation path
         }
     }
 
@@ -1268,6 +1317,24 @@
         DOM.bip84accountXpub.val(accountXpub);
     }
 
+    function displayBip86Info() {
+        // Get the derivation path for the account
+        var purpose = parseIntNoNaN(DOM.bip86purpose.val(), 86);
+        var coin = parseIntNoNaN(DOM.bip86coin.val(), 0);
+        var account = parseIntNoNaN(DOM.bip86account.val(), 0);
+        var path = "m/";
+        path += purpose + "'/";
+        path += coin + "'/";
+        path += account + "'/";
+        // Calculate the account extended keys
+        var accountExtendedKey = calcBip32ExtendedKey(path);
+        var accountXprv = accountExtendedKey.toBase58();
+        var accountXpub = accountExtendedKey.neutered().toBase58();
+        // Display the extended keys
+        DOM.bip86accountXprv.val(accountXprv);
+        DOM.bip86accountXpub.val(accountXpub);
+    }
+
     function displayBip32Info() {
         // Display the key
         DOM.seed.val(seed);
@@ -1281,13 +1348,214 @@
         DOM.extendedPrivKey.val(extendedPrivKey);
         var extendedPubKey = bip32ExtendedKey.neutered().toBase58();
         DOM.extendedPubKey.val(extendedPubKey);
-        // Display the addresses and privkeys
+        // Display addresses - use different interface for Ark networks
         clearAddressesList();
-        var initialAddressCount = parseInt(DOM.rowsToAdd.val());
-        displayAddresses(0, initialAddressCount);
+        var networkName = networks[DOM.network.val()].name;
+        if (networkName && networkName.includes("Bitcoin Ark")) {
+            showArkInterface();
+            displaySingleAddress();
+        } else {
+            showNormalInterface();
+            var initialAddressCount = parseInt(DOM.rowsToAdd.val());
+            displayAddresses(0, initialAddressCount);
+        }
 
         if (isELA()) {
             displayBip32InfoForELA();
+        }
+    }
+
+    function showArkInterface() {
+        // Hide normal table and CSV interface
+        $('#table').hide();
+        $('#csv').hide();
+        $('.nav-tabs').hide();
+        $('#more-rows-section').hide();
+        // Show Ark-specific interface
+        $('#ark-interface').show();
+        // Use standard Bitcoin derivation path (Ark is Layer-2 on Bitcoin)
+        DOM.derivationPathInput.val("m/44'/0'/0'/0");
+    }
+
+    function showNormalInterface() {
+        // Show normal table and CSV interface
+        $('#table').show();
+        $('#csv').show();
+        $('.nav-tabs').show();
+        $('#more-rows-section').show();
+        // Hide Ark-specific interface
+        $('#ark-interface').hide();
+    }
+
+    function displaySingleAddress() {
+        // Show pending while calculating
+        showPending();
+        
+        // Use setTimeout to allow UI to update
+        setTimeout(function() {
+            try {
+                // Parse the derivation path from the input
+                var path = DOM.derivationPathInput.val();
+                
+                // Parse the path to get the final index
+                var pathParts = path.replace("m/", "").split("/");
+                var currentKey = bip32ExtendedKey;
+                
+                // Derive the key for the given path
+                for (var i = 0; i < pathParts.length; i++) {
+                    var part = pathParts[i];
+                    var hardened = part.endsWith("'");
+                    var index = parseInt(hardened ? part.slice(0, -1) : part);
+                    
+                    if (hardened) {
+                        currentKey = currentKey.deriveHardened(index);
+                    } else {
+                        currentKey = currentKey.derive(index);
+                    }
+                }
+                
+                // Get the key pair - for consistency with private key tab, ensure compressed=true
+                var keyPair = currentKey.keyPair;
+                // For Ark, we need to ensure we use compressed keys like in private key tab
+                // Create a new ECPair with explicit compressed=true setting  
+                keyPair = new libs.bitcoin.ECPair(keyPair.d, null, { network: network, compressed: true });
+                if(isGRS())
+                    keyPair = new libs.groestlcoinjs.ECPair(keyPair.d, null, { network: network, compressed: true });
+                
+                // Get private key
+                var hasPrivkey = !currentKey.isNeutered();
+                var privkey = "NA";
+                if (hasPrivkey) {
+                    privkey = keyPair.toWIF();
+                    // BIP38 encode private key if required
+                    if (DOM.useBip38.prop("checked")) {
+                        var bip38password = DOM.bip38Password.val();
+                        if(isGRS())
+                            privkey = libs.groestlcoinjsBip38.encrypt(keyPair.d.toBuffer(), false, bip38password, function(p) {
+                                // Progress update
+                            }, null, networks[DOM.network.val()].name.includes("Testnet"));
+                        else
+                            privkey = libs.bip38.encrypt(keyPair.d.toBuffer(), false, bip38password, function(p) {
+                                // Progress update
+                            });
+                    }
+                }
+                
+                // Get public key
+                var pubkey = keyPair.getPublicKeyBuffer().toString('hex');
+                
+                // Handle special cases for different networks
+                if (networkIsEthereum()) {
+                    var pubkeyBuffer = keyPair.getPublicKeyBuffer();
+                    var ethPubkey = libs.ethUtil.importPublic(pubkeyBuffer);
+                    pubkey = libs.ethUtil.addHexPrefix(pubkey);
+                    if (hasPrivkey) {
+                        privkey = libs.ethUtil.bufferToHex(keyPair.d.toBuffer(32));
+                    }
+                }
+                
+                // Display the keys
+                DOM.privateKeyDisplay.val(privkey);
+                DOM.publicKeyDisplay.val(pubkey);
+                
+                // Generate Ark address for Ark networks
+                var networkName = networks[DOM.network.val()].name;
+                if (networkName === "BTC - Bitcoin Ark Testnet" || networkName === "BTC - Bitcoin Ark") {
+                    generateArkAddressForMnemonic(keyPair, networkName);
+                } else {
+                    // Clear Ark fields for non-Ark networks
+                    DOM.arkAddressDisplay.val("");
+                    DOM.arkServerUrlMnemonic.val("");
+                    DOM.arkServerPubkeyMnemonic.val("");
+                    DOM.arkExitDelayMnemonic.val("");
+                    DOM.arkVtxoKeyMnemonic.val("");
+                }
+                
+            } catch (error) {
+                console.error("Error in displaySingleAddress:", error);
+                DOM.privateKeyDisplay.val("Error: " + error.message);
+                DOM.publicKeyDisplay.val("Error: " + error.message);
+                DOM.arkAddressDisplay.val("Error: " + error.message);
+            }
+            
+            // Hide pending when done (always execute)
+            hidePending();
+        }, 50); // Small delay to allow UI to update
+    }
+
+    function generateArkAddressForMnemonic(keyPair, networkName) {
+        // Get user's public key and private key exactly like in private key tab
+        var userPubkey = keyPair.getPublicKeyBuffer();
+        var pubkeyHex = userPubkey.toString('hex');
+        var privateKeyHex = keyPair.d.toBuffer(32).toString('hex');
+        
+        // Set server URL based on network
+        var defaultServerUrl = networkName === "BTC - Bitcoin Ark" ? 'https://bitcoin-beta.arkade.sh' : 'https://mutinynet.arkade.sh';
+        DOM.arkServerUrlMnemonic.val(defaultServerUrl);
+        
+        // Try to fetch server info and generate address
+        if (window.ArkSDK && window.ArkSDK.fetchServerInfo) {
+            window.ArkSDK.fetchServerInfo(defaultServerUrl).then(function(serverInfo) {
+                // Display server info
+                DOM.arkServerPubkeyMnemonic.val(serverInfo.signerPubkey || '');
+                DOM.arkExitDelayMnemonic.val(serverInfo.unilateralExitDelay || '');
+                
+                // Generate Ark address
+                generateArkAddressWithServerInfo(userPubkey, pubkeyHex, serverInfo, networkName);
+            }).catch(function(error) {
+                console.error('Failed to fetch server info via SDK:', error);
+                DOM.arkAddressDisplay.val("Error fetching server info: " + error.message);
+            });
+        } else {
+            // Fallback to jQuery AJAX
+            $.ajax({
+                url: defaultServerUrl + '/v1/info',
+                method: 'GET',
+                success: function(serverInfo) {
+                    // Display server info
+                    DOM.arkServerPubkeyMnemonic.val(serverInfo.signerPubkey || '');
+                    DOM.arkExitDelayMnemonic.val(serverInfo.unilateralExitDelay || '');
+                    
+                    // Generate Ark address
+                    generateArkAddressWithServerInfo(userPubkey, pubkeyHex, serverInfo, networkName);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to fetch server info via AJAX:', error);
+                    DOM.arkAddressDisplay.val("Error fetching server info: " + error);
+                }
+            });
+        }
+    }
+
+    async function generateArkAddressWithServerInfo(userPubkey, pubkeyHex, serverInfo, networkName) {
+        try {
+            // Check if SDK is available
+            if (typeof window.ArkSDK === 'undefined' || !window.ArkSDK.generateArkProtocolAddress) {
+                throw new Error('Ark SDK not loaded. Please refresh the page.');
+            }
+            
+            // Determine network type - must match private key tab logic exactly
+            var networkType = (networkName && networkName.indexOf('Testnet') === -1 && 
+                              network === libs.bitcoin.networks.bitcoin) ? 'mainnet' : 'testnet';
+            var serverUrl = DOM.arkServerUrlMnemonic.val();
+            
+            // Use SDK to generate the address
+            var result = await window.ArkSDK.generateArkProtocolAddress(
+                pubkeyHex,
+                serverUrl,
+                networkType
+            );
+            
+            if (result.success) {
+                DOM.arkAddressDisplay.val(result.address);
+                DOM.arkVtxoKeyMnemonic.val(result.vtxoKey || '');
+            } else {
+                DOM.arkAddressDisplay.val("Error: " + (result.error || 'Failed to generate Ark address'));
+            }
+            
+        } catch (error) {
+            console.error('Error generating Ark address:', error);
+            DOM.arkAddressDisplay.val("Error: " + error.message);
         }
     }
 
@@ -1313,12 +1581,214 @@
     }
 
     function segwitSelected() {
-        return bip49TabSelected() || bip84TabSelected() || bip141TabSelected();
+        return bip49TabSelected() || bip84TabSelected() || bip86TabSelected() || bip141TabSelected();
     }
 
     function p2wpkhSelected() {
         return bip84TabSelected() ||
                 bip141TabSelected() && DOM.bip141semantics.val() == "p2wpkh";
+    }
+
+    function p2trSelected() {
+        return bip86TabSelected();
+    }
+
+    // Tagged hash function for BIP341
+    function taggedHash(tag, data) {
+        // Create SHA256 hash of the tag as a buffer
+        var tagBuffer = [];
+        for (var i = 0; i < tag.length; i++) {
+            tagBuffer.push(tag.charCodeAt(i));
+        }
+        var tagHash = libs.bitcoin.crypto.sha256(tagBuffer);
+        
+        // Concatenate: tagHash || tagHash || data
+        var preimage = [];
+        for (var i = 0; i < tagHash.length; i++) {
+            preimage.push(tagHash[i]);
+        }
+        for (var i = 0; i < tagHash.length; i++) {
+            preimage.push(tagHash[i]);
+        }
+        for (var i = 0; i < data.length; i++) {
+            preimage.push(data[i]);
+        }
+        
+        // Return SHA256 of the preimage
+        return libs.bitcoin.crypto.sha256(preimage);
+    }
+    
+    // Apply Taproot tweak to x-only public key (BIP341)
+    function applyTaprootTweak(xOnlyPubkey) {
+        try {
+            // Get a dummy ECPair to access the curve
+            var dummyKey = libs.bitcoin.ECPair.makeRandom();
+            var curve = dummyKey.Q.curve;
+            var BigIntClass = dummyKey.d.constructor;
+            
+            // Convert x-only pubkey to BigInteger
+            var x = BigIntClass.fromByteArrayUnsigned(xOnlyPubkey);
+            
+            // Constants
+            var p = curve.p;
+            var n = curve.n;
+            var G = curve.G;
+            var seven = new BigIntClass('7');
+            var three = new BigIntClass('3');
+            var one = BigIntClass.ONE;
+            var four = new BigIntClass('4');
+            var two = new BigIntClass('2');
+            var zero = BigIntClass.ZERO;
+            
+            // Lift x to point (compute y from x)
+            // y^2 = x^3 + 7 (mod p)
+            var x3 = x.modPow(three, p);
+            var ySquared = x3.add(seven).mod(p);
+            
+            // Compute y = ySquared^((p+1)/4) mod p
+            var exponent = p.add(one).divide(four);
+            var y = ySquared.modPow(exponent, p);
+            
+            // Verify that y^2 = x^3 + 7
+            var ySquaredCheck = y.modPow(two, p);
+            if (ySquaredCheck.compareTo(ySquared) !== 0) {
+                throw new Error('Invalid point: y^2 != x^3 + 7');
+            }
+            
+            // Ensure y is even (BIP340/341 convention)
+            if (y.mod(two).compareTo(zero) !== 0) {
+                y = p.subtract(y);
+            }
+            
+            // Create the internal pubkey point P
+            // In bitcoinjs-lib v3, we need to use the Point constructor with z=1 for affine points
+            var Point = dummyKey.Q.constructor;
+            var P = new Point(curve, x, y, one);
+            
+            // For BIP86 (key-path spending), we tweak with empty script tree
+            // tweak = hashTapTweak(bytes(P))
+            var tweakHash = taggedHash('TapTweak', xOnlyPubkey);
+            var tweakInt = BigIntClass.fromByteArrayUnsigned(tweakHash);
+            
+            // Ensure tweak is within valid range
+            tweakInt = tweakInt.mod(n);
+            
+            // Calculate Q = P + tweak*G
+            var tweakPoint = G.multiply(tweakInt);
+            var Q = P.add(tweakPoint);
+            
+            // Return x-coordinate of Q as 32 bytes
+            var QxBigInt = Q.affineX;
+            var QxBytes = [];
+            
+            // Convert BigInteger to bytes manually to ensure unsigned
+            var hex = QxBigInt.toString(16);
+            // Pad to 64 hex chars (32 bytes)
+            while (hex.length < 64) {
+                hex = '0' + hex;
+            }
+            
+            // Convert hex to byte array
+            for (var i = 0; i < hex.length; i += 2) {
+                QxBytes.push(parseInt(hex.substr(i, 2), 16));
+            }
+            
+            return QxBytes;
+        } catch (e) {
+            console.error('Taproot tweak error:', e);
+            throw e;
+        }
+    }
+
+    // Bech32m encoding for Taproot addresses (BIP350)
+    function generateBech32mAddress(hrp, witver, witprog) {
+        var CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+        var BECH32M_CONST = 0x2bc830a3;
+        
+        // Convert witness program to 5-bit groups
+        function convertBits(data, fromBits, toBits, pad) {
+            var acc = 0;
+            var bits = 0;
+            var ret = [];
+            var maxv = (1 << toBits) - 1;
+            for (var i = 0; i < data.length; i++) {
+                var value = data[i];
+                if (value < 0 || (value >> fromBits) !== 0) {
+                    return null;
+                }
+                acc = (acc << fromBits) | value;
+                bits += fromBits;
+                while (bits >= toBits) {
+                    bits -= toBits;
+                    ret.push((acc >> bits) & maxv);
+                }
+            }
+            if (pad) {
+                if (bits > 0) {
+                    ret.push((acc << (toBits - bits)) & maxv);
+                }
+            } else if (bits >= fromBits || ((acc << (toBits - bits)) & maxv)) {
+                return null;
+            }
+            return ret;
+        }
+        
+        // Polymod for checksum calculation
+        function polymod(values) {
+            var gen = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+            var chk = 1;
+            for (var i = 0; i < values.length; i++) {
+                var top = chk >> 25;
+                chk = (chk & 0x1ffffff) << 5 ^ values[i];
+                for (var j = 0; j < 5; j++) {
+                    if ((top >> j) & 1) {
+                        chk ^= gen[j];
+                    }
+                }
+            }
+            return chk;
+        }
+        
+        // Create checksum
+        function createChecksum(hrp, data) {
+            var values = [];
+            // Add HRP expansion
+            for (var i = 0; i < hrp.length; i++) {
+                values.push(hrp.charCodeAt(i) >> 5);
+            }
+            values.push(0);
+            for (var i = 0; i < hrp.length; i++) {
+                values.push(hrp.charCodeAt(i) & 31);
+            }
+            // Add data
+            values = values.concat(data);
+            // Add 6 zeros for checksum
+            values = values.concat([0, 0, 0, 0, 0, 0]);
+            // Calculate checksum with Bech32m constant
+            var polymodValue = polymod(values) ^ BECH32M_CONST;
+            var checksum = [];
+            for (var i = 0; i < 6; i++) {
+                checksum.push((polymodValue >> 5 * (5 - i)) & 31);
+            }
+            return checksum;
+        }
+        
+        // Convert witness program to 5-bit groups
+        var conv = convertBits(witprog, 8, 5, true);
+        if (conv === null) {
+            return null;
+        }
+        
+        // Build the address
+        var data = [witver].concat(conv);
+        var checksum = createChecksum(hrp, data);
+        var combined = data.concat(checksum);
+        var address = hrp + '1';
+        for (var i = 0; i < combined.length; i++) {
+            address += CHARSET[combined[i]];
+        }
+        
+        return address;
     }
 
     function p2wpkhInP2shSelected() {
@@ -1347,6 +1817,7 @@
         var isP2wpkhInP2sh = p2wpkhInP2shSelected();
         var isP2wsh = p2wshSelected();
         var isP2wshInP2sh = p2wshInP2shSelected();
+        var isP2tr = p2trSelected();
 
         function init() {
             calculateValues();
@@ -1357,6 +1828,25 @@
                 if (!self.shouldGenerate) {
                     return;
                 }
+                
+                // Check if this is an Ark network in mnemonic tab
+                // Ark addresses require special server parameters that are only available in private key tab
+                var networkName = networks[DOM.network.val()].name;
+                if (networkName && networkName.includes("Bitcoin Ark")) {
+                    // Skip address generation for Ark networks in mnemonic tab
+                    // These addresses would be invalid without proper server parameters
+                    var indexText = getDerivationPath() + "/" + index;
+                    if (useHardenedAddresses) {
+                        indexText = indexText + "'";
+                    }
+                    addAddressToList(indexText, "Use Private Key tab for Ark addresses", "", "");
+                    if (isLast) {
+                        hidePending();
+                        updateCsv();
+                    }
+                    return;
+                }
+                
                 // derive HDkey for this row of the table
                 var key = "NA";
                 if (useHardenedAddresses) {
@@ -1386,11 +1876,11 @@
                     if (useBip38) {
                         if(isGRS())
                             privkey = libs.groestlcoinjsBip38.encrypt(keyPair.d.toBuffer(), false, bip38password, function(p) {
-                                console.log("Progressed " + p.percent.toFixed(1) + "% for index " + index);
+                                // Progress update
                             }, null, networks[DOM.network.val()].name.includes("Testnet"));
                         else
                             privkey = libs.bip38.encrypt(keyPair.d.toBuffer(), false, bip38password, function(p) {
-                                console.log("Progressed " + p.percent.toFixed(1) + "% for index " + index);
+                                // Progress update
                             });
                     }
                 }
@@ -1546,7 +2036,40 @@
                     if (!segwitAvailable) {
                         return;
                     }
-                    if (isP2wpkh) {
+                    if (isP2tr) {
+                        // BIP86 Taproot address generation
+                        // Generate Taproot address using Bech32m encoding
+                        try {
+                            var pubkeyBuffer = key.getPublicKeyBuffer();
+                            // For taproot, we need the x-only public key (32 bytes instead of 33)
+                            var xOnlyPubkey = [];
+                            for (var i = 1; i < 33; i++) {
+                                xOnlyPubkey.push(pubkeyBuffer[i]);
+                            }
+                            
+                            // Apply BIP341 Taproot tweaking for BIP86 (key-path spending)
+                            var tweakedPubkey = applyTaprootTweak(xOnlyPubkey);
+                            
+                            // Determine HRP based on network
+                            var hrp = network === libs.bitcoin.networks.bitcoin ? 'bc' : 
+                                     network === libs.bitcoin.networks.testnet ? 'tb' : 'tb';
+                            
+                            // For Taproot (witness version 1), create the witness program
+                            // Format: witness_version (1) + witness_program (32 bytes tweaked pubkey)
+                            address = generateBech32mAddress(hrp, 1, tweakedPubkey);
+                            if (!address) {
+                                console.error('Bech32m encoding failed for Taproot address');
+                                address = 'bc1p' + xOnlyPubkey.slice(0, 8).map(function(b) { 
+                                    return b.toString(16).padStart(2, '0'); 
+                                }).join('') + '...';
+                            }
+                        } catch (error) {
+                            console.error('Error generating Taproot address:', error);
+                            console.error('Stack:', error.stack);
+                            address = 'Taproot address generation error';
+                        }
+                    }
+                    else if (isP2wpkh) {
                         var keyhash = libs.bitcoin.crypto.hash160(key.getPublicKeyBuffer());
                         var scriptpubkey = libs.bitcoin.script.witnessPubKeyHash.output.encode(keyhash);
                         address = libs.bitcoin.address.fromOutputScript(scriptpubkey, network)
@@ -2083,8 +2606,8 @@
             };
         }
         catch (e) {
-            console.log("Error detecting entropy strength with zxcvbn:");
-            console.log(e);
+            // Error detecting entropy strength with zxcvbn
+            // console.error(e);
         }
         var entropyTypeStr = getEntropyTypeStr(entropy);
         DOM.entropyTypeInputs.attr("checked", false);
@@ -2271,6 +2794,10 @@
         return DOM.bip84tab.hasClass("active");
     }
 
+    function bip86TabSelected() {
+        return DOM.bip86tab.hasClass("active");
+    }
+
     function bip141TabSelected() {
         return DOM.bip141tab.hasClass("active");
     }
@@ -2283,6 +2810,7 @@
         DOM.bip44coin.val(coinValue);
         DOM.bip49coin.val(coinValue);
         DOM.bip84coin.val(coinValue);
+        DOM.bip86coin.val(coinValue);
     }
 
     function showSegwitAvailable() {
@@ -2290,6 +2818,8 @@
         DOM.bip49available.removeClass("hidden");
         DOM.bip84unavailable.addClass("hidden");
         DOM.bip84available.removeClass("hidden");
+        DOM.bip86unavailable.addClass("hidden");
+        DOM.bip86available.removeClass("hidden");
         DOM.bip141unavailable.addClass("hidden");
         DOM.bip141available.removeClass("hidden");
     }
@@ -2299,6 +2829,8 @@
         DOM.bip49unavailable.removeClass("hidden");
         DOM.bip84available.addClass("hidden");
         DOM.bip84unavailable.removeClass("hidden");
+        DOM.bip86available.addClass("hidden");
+        DOM.bip86unavailable.removeClass("hidden");
         DOM.bip141available.addClass("hidden");
         DOM.bip141unavailable.removeClass("hidden");
     }
@@ -2571,6 +3103,20 @@
                 // Using hd coin value 1 based on bip44_coin_type
                 // https://github.com/chaintope/bitcoinrb/blob/f1014406f6b8f9b4edcecedc18df70c80df06f11/lib/bitcoin/chainparams/regtest.yml
                 setHdCoin(1);
+            },
+        },
+        {
+            name: "BTC - Bitcoin Ark",
+            onSelect: function() {
+                network = libs.bitcoin.networks.bitcoin;
+                setHdCoin(0); // Use Bitcoin coin type (Ark is Layer-2 on Bitcoin)
+            },
+        },
+        {
+            name: "BTC - Bitcoin Ark Testnet",
+            onSelect: function() {
+                network = libs.bitcoin.networks.testnet;
+                setHdCoin(1); // Use Bitcoin testnet coin type
             },
         },
         {
@@ -3973,10 +4519,17 @@
         DOM.extendedPrivKey.val(libs.elastosjs.getBip32ExtendedPrivateKey(seed, coin, account, change));
         DOM.extendedPubKey.val(libs.elastosjs.getBip32ExtendedPublicKey(seed, coin, account, change));
 
-        // Display the addresses and privkeys
+        // Display addresses - use different interface for Ark networks
         clearAddressesList();
-        var initialAddressCount = parseInt(DOM.rowsToAdd.val());
-        displayAddresses(0, initialAddressCount);
+        var networkName = networks[DOM.network.val()].name;
+        if (networkName && networkName.includes("Bitcoin Ark")) {
+            showArkInterface();
+            displaySingleAddress();
+        } else {
+            showNormalInterface();
+            var initialAddressCount = parseInt(DOM.rowsToAdd.val());
+            displayAddresses(0, initialAddressCount);
+        }
     }
 
     function calcAddressForELA(seed, coin, account, change, index) {
@@ -3993,6 +4546,33 @@
     }
     // ELA - Elastos functions - end
 
+    // Add event handler for derivation path input
+    DOM.derivationPathInput.on('input', function() {
+        if (DOM.phrase.val() || DOM.rootKey.val()) {
+            displaySingleAddress();
+        }
+    });
+
+    // Add event handler for network changes to switch interface
+    DOM.phraseNetwork.on('change', function() {
+        var networkName = networks[DOM.phraseNetwork.val()].name;
+        if (networkName && networkName.includes("Bitcoin Ark")) {
+            showArkInterface();
+            // Ark uses standard Bitcoin derivation path (it's a Layer-2)
+            var coinType = networkName.includes("Testnet") ? "1" : "0";
+            DOM.derivationPathInput.val("m/44'/" + coinType + "'/0'/0");
+        } else {
+            showNormalInterface();
+            // Reset to default path for other networks
+            DOM.derivationPathInput.val("m/44'/0'/0'/0");
+        }
+    });
+
     init();
+    
+    // Export necessary variables for Private Key tab functionality
+    window.networks = networks;
+    window.network = network;
+    window.libs = libs;
 
 })();
