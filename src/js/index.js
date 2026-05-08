@@ -9,6 +9,7 @@
     var network = libs.bitcoin.networks.bitcoin;
     var addressRowTemplate = $("#address-row-template");
     var ldsWallet = null;
+    var ldsWalletDev = null;
 
     var showIndex = true;
     var showAddress = true;
@@ -71,6 +72,7 @@
     DOM.bip84tab = $("#bip84-tab");
     DOM.bip141tab = $("#bip141-tab");
     DOM.ldstab = $("#lds-tab");
+    DOM.ldsdevtab = $("#lds-dev-tab");
     DOM.bip32panel = $("#bip32");
     DOM.bip44panel = $("#bip44");
     DOM.bip49panel = $("#bip49");
@@ -154,6 +156,14 @@
     DOM.ldsDerivationPath = $("#lds-derivation-path");
     DOM.ldsSegwitType = $("#lds-segwit-type");
     DOM.ldsQr = $("#lds-qr");
+    DOM.ldsdevLnurl = $("#lds-dev-lnurl");
+    DOM.ldsdevLightningAddress = $("#lds-dev-lightning-address");
+    DOM.ldsdevAddressProofOfOwnership = $("#lds-dev-address-proof-of-ownership");
+    DOM.ldsdevLnhubAdminUrl = $("#lds-dev-lnhub-admin-url");
+    DOM.ldsdevAssociatedAddress = $("#lds-dev-associated-address");
+    DOM.ldsdevDerivationPath = $("#lds-dev-derivation-path");
+    DOM.ldsdevSegwitType = $("#lds-dev-segwit-type");
+    DOM.ldsdevQr = $("#lds-dev-qr");
 
     function init() {
         // Events
@@ -214,6 +224,10 @@
 
     // Event handlers
 
+    var ldsDevNetwork = {
+        apiBaseUrl: "https://dev.lightning.space/v1",
+    };
+
     function getLdsWallet(seed, passphrase) {
         const newLdsWallet = new lds.LDS(seed, passphrase);
         if (!ldsWallet || ldsWallet.getUniqueId() !== newLdsWallet.getUniqueId()) {
@@ -221,6 +235,15 @@
             updateLdsFields();
         }
         return ldsWallet;
+    }
+
+    function getLdsDevWallet(seed, passphrase) {
+        const newWallet = new lds.LDS(seed, passphrase, ldsDevNetwork);
+        if (!ldsWalletDev || ldsWalletDev.getUniqueId() !== newWallet.getUniqueId()) {
+            ldsWalletDev = newWallet;
+            updateLdsDevFields();
+        }
+        return ldsWalletDev;
     }
 
     const updateLdsFields = () => {
@@ -238,6 +261,23 @@
       DOM.associatedAddress.val(ldsWallet.getOnchainAssociatedAddress());
       DOM.ldsDerivationPath.val(ldsWallet.getDerivationPath());
       DOM.ldsSegwitType.val(ldsWallet.getSegwitType());
+    };
+
+    const updateLdsDevFields = () => {
+      cleanLdsDevFields();
+      ldsWalletDev.getUser().then(({ lightning }) => {
+        DOM.ldsdevLightningAddress.val(lightning.address);
+        DOM.ldsdevLnurl.val(lightning.addressLnurl);
+        DOM.ldsdevAddressProofOfOwnership.val(lightning.addressOwnershipProof);
+        const btcWallet = lightning.wallets.find(
+          (wallet) => wallet.asset.name === "BTC"
+        );
+        DOM.ldsdevLnhubAdminUrl.val(btcWallet.lndhubAdminUrl);
+        addLdsDevQr(lightning.addressLnurl);
+      });
+      DOM.ldsdevAssociatedAddress.val(ldsWalletDev.getOnchainAssociatedAddress());
+      DOM.ldsdevDerivationPath.val(ldsWalletDev.getDerivationPath());
+      DOM.ldsdevSegwitType.val(ldsWalletDev.getSegwitType());
     };
 
     async function onScanQRCode() {
@@ -398,6 +438,7 @@
         writeSplitPhrase(phrase);
         addSeedQr(phrase);
         getLdsWallet(phrase, passphrase);
+        getLdsDevWallet(phrase, passphrase);
     }
 
     function tabChanged() {
@@ -1077,6 +1118,17 @@
         DOM.ldsQr.append(qrEl);
     }
 
+    function addLdsDevQr(lnurl) {
+        DOM.ldsdevQr.empty();
+        var qrEl = libs.kjua({
+            text: lnurl,
+            render: "canvas",
+            size: 200,
+            ecLevel: 'H',
+        });
+        DOM.ldsdevQr.append(qrEl);
+    }
+
     function cleanLdsFields() {
         DOM.lightningAddress.val("");
         DOM.ldsLnurl.val("");
@@ -1086,6 +1138,17 @@
         DOM.ldsDerivationPath.val("");
         DOM.ldsSegwitType.val("");
         DOM.associatedAddress.val("");
+    }
+
+    function cleanLdsDevFields() {
+        DOM.ldsdevLightningAddress.val("");
+        DOM.ldsdevLnurl.val("");
+        DOM.ldsdevAddressProofOfOwnership.val("");
+        DOM.ldsdevLnhubAdminUrl.val("");
+        DOM.ldsdevQr.empty();
+        DOM.ldsdevDerivationPath.val("");
+        DOM.ldsdevSegwitType.val("");
+        DOM.ldsdevAssociatedAddress.val("");
     }
 
     function getDerivationPath() {
@@ -1146,6 +1209,9 @@
         }
         else if (ldsTabSelected()) {
             return ldsWallet.getDerivationPath();
+        }
+        else if (ldsDevTabSelected()) {
+            return ldsWalletDev.getDerivationPath();
         }
         else {
             console.log("Unknown derivation path");
@@ -1696,6 +1762,7 @@
         clearKeys();
         hideValidationError();
         cleanLdsFields();
+        cleanLdsDevFields();
     }
 
     function clearAddressesList() {
@@ -2277,6 +2344,10 @@
 
     function ldsTabSelected() {
         return DOM.ldstab.hasClass("active");
+    }
+
+    function ldsDevTabSelected() {
+        return DOM.ldsdevtab.hasClass("active");
     }
 
     function setHdCoin(coinValue) {

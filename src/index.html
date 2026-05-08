@@ -449,6 +449,9 @@
                         <li id="lds-tab">
                             <a href="#lds" role="tab" data-toggle="tab">LDS</a>
                         </li>
+                        <li id="lds-dev-tab">
+                            <a href="#lds-dev" role="tab" data-toggle="tab">LDS DEV</a>
+                        </li>
                     </ul>
                     <div class="derivation-type tab-content">
                         <div id="bip44" class="tab-pane active">
@@ -888,6 +891,83 @@
                                 <div class="col-sm-4 col-xs-12">
                                     <br><br>
                                     <div id="lds-qr" class="d-flex justify-content-center align-items-center"></div>
+                                    <p class="text-center">Scan the QR code with your lightning wallet to transfer funds.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="lds-dev" class="tab-pane">
+                            <div class="lds-container row">
+                                <form class="form-horizontal col-sm-8 col-xs-12" role="form">
+                                    <br>
+                                    <div class="available">
+                                        <div class="col-sm-2"></div>
+                                        <div class="col-sm-10">
+                                            <p>
+                                                For more info see the
+                                                <a href="https://github.com/LightningDotSpace/api" target="_blank">LightningDotSpace API</a>.
+                                            </p>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="lds-dev-lnurl" class="col-sm-2 control-label">
+                                                LNURL
+                                            </label>
+                                            <div class="col-sm-10">
+                                                <textarea id="lds-dev-lnurl" type="text" class="lds-lnurl form-control" value="" readonly></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="lds-dev-lightning-address" class="col-sm-2 control-label">
+                                                Lightning Address
+                                            </label>
+                                            <div class="col-sm-10">
+                                                <input id="lds-dev-lightning-address" type="text" class="lightning-address form-control" value="" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="lds-dev-address-proof-of-ownership" class="col-sm-2 control-label">
+                                                Address Proof of Ownership
+                                            </label>
+                                            <div class="col-sm-10">
+                                                <textarea id="lds-dev-address-proof-of-ownership" type="text" class="address-proof-of-ownership form-control" value="" readonly></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="lds-dev-lnhub-admin-url" class="col-sm-2 control-label">
+                                                LNHub Admin URL
+                                            </label>
+                                            <div class="col-sm-10">
+                                                <textarea id="lds-dev-lnhub-admin-url" type="text" class="lnhub-admin-url form-control" value="" readonly></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="lds-dev-associated-address" class="col-sm-2 control-label">
+                                                Associated Address
+                                            </label>
+                                            <div class="col-sm-10">
+                                                <input id="lds-dev-associated-address" type="text" class="associated-address form-control" value="" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="lds-dev-derivation-path" class="col-sm-2 control-label">
+                                                Derivation Path
+                                            </label>
+                                            <div class="col-sm-10">
+                                                <input id="lds-dev-derivation-path" type="text" class="lds-derivation-path form-control" value="" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="lds-dev-segwit-type" class="col-sm-2 control-label">
+                                                SegWit Type
+                                            </label>
+                                            <div class="col-sm-10">
+                                                <input id="lds-dev-segwit-type" type="text" class="lds-segwit-type form-control" value="" readonly>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                                <div class="col-sm-4 col-xs-12">
+                                    <br><br>
+                                    <div id="lds-dev-qr" class="d-flex justify-content-center align-items-center"></div>
                                     <p class="text-center">Scan the QR code with your lightning wallet to transfer funds.</p>
                                 </div>
                             </div>
