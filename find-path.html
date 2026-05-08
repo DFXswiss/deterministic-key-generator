@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Find Derivation Path</title>
+    <script src="src/js/jquery-3.2.1.min.js"></script>
+    <script src="src/js/bitcoinjs-extensions.js"></script>
+    <script src="src/js/jsbip39.js"></script>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .match { background: #90EE90; font-weight: bold; }
+        .error { color: red; }
+        .result { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h1>Find Derivation Path for Private Key</h1>
+    
+    <div>
+        <p><strong>Mnemonic:</strong> hub easily force horn pull coast business rice cabbage shed around fence</p>
+        <p><strong>Target Private Key:</strong> KzF9AjZVYkVGyV3MAtDWs1BrMWq6jQzqwoeoSstFCMAw1UaALCDP</p>
+    </div>
+    
+    <h2>Testing Paths:</h2>
+    <div id="results"></div>
+    
+    <script>
+        const mnemonic = 'hub easily force horn pull coast business rice cabbage shed around fence';
+        const targetWIF = 'KzF9AjZVYkVGyV3MAtDWs1BrMWq6jQzqwoeoSstFCMAw1UaALCDP';
+        
+        // Wait for libraries to load
+        setTimeout(function() {
+            console.log('Starting path search...');
+            
+            const seed = libs.bip39.mnemonicToSeed(mnemonic);
+            console.log('Seed:', seed.toString('hex'));
+            
+            const rootMainnet = libs.bitcoin.HDNode.fromSeedBuffer(seed, libs.bitcoin.networks.bitcoin);
+            const rootTestnet = libs.bitcoin.HDNode.fromSeedBuffer(seed, libs.bitcoin.networks.testnet);
+            
+            // Comprehensive list of paths to test
+            const pathsToTest = [
+                // Standard Bitcoin paths
+                "m/44'/0'/0'/0/0",
+                "m/44'/0'/0'/0",
+                "m/44'/0'/0'",
+                "m/44'/0'",
+                
+                // Ark with coin type 1237
+                "m/44'/1237'/0'/0/0",
+                "m/44'/1237'/0'/0",
+                "m/44'/1237'/0'",
+                "m/44'/1237'",
+                
+                // Simple paths
+                "m/0/0",
+                "m/0",
+                "m",
+                
+                // Legacy paths
+                "m/0'/0'/0'",
+                "m/0'/0",
+                
+                // BIP84 (native segwit)
+                "m/84'/0'/0'/0/0",
+                "m/84'/0'/0'/0",
+                
+                // BIP49 (p2sh segwit)
+                "m/49'/0'/0'/0/0",
+                "m/49'/0'/0'/0"
+            ];
+            
+            let resultsHtml = '';
+            let foundMatch = false;
+            
+            pathsToTest.forEach(path => {
+                // Test with mainnet
+                try {
+                    let node = rootMainnet;
+                    
+                    if (path !== 'm') {
+                        const parts = path.replace('m/', '').split('/');
+                        
+                        parts.forEach(part => {
+                            const hardened = part.includes("'");
+                            const index = parseInt(hardened ? part.replace("'", "") : part);
+                            
+                            if (hardened) {
+                                node = node.deriveHardened(index);
+                            } else {
+                                node = node.derive(index);
+                            }
+                        });
+                    }
+                    
+                    const wif = node.keyPair.toWIF();
+                    const privHex = node.keyPair.d.toBuffer(32).toString('hex');
+                    const pubHex = node.keyPair.getPublicKeyBuffer().toString('hex');
+                    
+                    const isMatch = wif === targetWIF;
+                    if (isMatch) foundMatch = true;
+                    
+                    resultsHtml += '<div class="result ' + (isMatch ? 'match' : '') + '">';
+                    resultsHtml += '<strong>Path: ' + path + ' (mainnet)</strong><br>';
+                    resultsHtml += 'WIF: ' + wif + '<br>';
+                    resultsHtml += 'Match: ' + (isMatch ? '✅ YES!' : '❌ No') + '<br>';
+                    if (isMatch) {
+                        resultsHtml += 'Private Key (hex): ' + privHex + '<br>';
+                        resultsHtml += 'Public Key (hex): ' + pubHex + '<br>';
+                    }
+                    resultsHtml += '</div>';
+                    
+                } catch (e) {
+                    resultsHtml += '<div class="result error">';
+                    resultsHtml += '<strong>Path: ' + path + ' (mainnet)</strong><br>';
+                    resultsHtml += 'Error: ' + e.message;
+                    resultsHtml += '</div>';
+                }
+                
+                // Test with testnet
+                try {
+                    let node = rootTestnet;
+                    
+                    if (path !== 'm') {
+                        const parts = path.replace('m/', '').split('/');
+                        
+                        parts.forEach(part => {
+                            const hardened = part.includes("'");
+                            const index = parseInt(hardened ? part.replace("'", "") : part);
+                            
+                            if (hardened) {
+                                node = node.deriveHardened(index);
+                            } else {
+                                node = node.derive(index);
+                            }
+                        });
+                    }
+                    
+                    const wif = node.keyPair.toWIF();
+                    const isMatch = wif === targetWIF;
+                    
+                    if (isMatch) {
+                        foundMatch = true;
+                        resultsHtml += '<div class="result match">';
+                        resultsHtml += '<strong>Path: ' + path + ' (testnet)</strong><br>';
+                        resultsHtml += 'WIF: ' + wif + '<br>';
+                        resultsHtml += 'Match: ✅ YES!<br>';
+                        resultsHtml += '</div>';
+                    }
+                    
+                } catch (e) {
+                    // Ignore testnet errors
+                }
+            });
+            
+            if (!foundMatch) {
+                resultsHtml = '<div class="result error"><strong>❌ No matching path found!</strong><br>' +
+                             'The private key does not match any standard derivation path from this mnemonic.</div>' + 
+                             resultsHtml;
+            } else {
+                resultsHtml = '<div class="result match"><strong>✅ Found matching path(s) above!</strong></div>' + 
+                             resultsHtml;
+            }
+            
+            document.getElementById('results').innerHTML = resultsHtml;
+            console.log('Search complete. Found match:', foundMatch);
+            
+        }, 1000); // Wait for libraries to load
+    </script>
+</body>
+</html>

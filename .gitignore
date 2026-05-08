@@ -1,7 +1,38 @@
-node_modules
-bip39-standalone.html
-libs/lds/dist
-.DS_Store
+# Dependencies
+node_modules/
 
-# FTP deployment state
-.ftp-deploy-sync-state.json
+# Test files
+test-*.js
+test-*.html
+verify-*.js
+decode-*.js
+compare-*.js
+*-debug.js
+*-test.js
+
+# Test results
+test-results/
+*.test-report.json
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
+*.cache
+
+# Local development
+.env
+.env.local
+
+# Demo projects
+ark-key-generator/
+spark-wallet-demo/

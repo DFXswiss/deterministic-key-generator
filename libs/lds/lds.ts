@@ -10,20 +10,29 @@ const ECPair: ECPairAPI = ECPairFactory(ecc);
 bitcoin.initEccLib(ecc);
 const bip32 = BIP32Factory(ecc);
 
+export type LdsNetworkOptions = {
+  apiBaseUrl?: string;
+  messageHost?: string;
+};
+
 export class LDS {
   private mnemonic: string;
   private passphrase: string;
 
   private derivationPath = "m/84'/0'/0'/0/0";
   private segwitType = "p2wpkh";
-  private message = 'By_signing_this_message,_you_confirm_to_lightning.space_that_you_are_the_sole_owner_of_the_provided_Blockchain_address._Your_ID:_';
-  private static ldsUrl = 'https://lightning.space/v1';
+  private readonly message: string;
+  private readonly apiBaseUrl: string;
 
   private userCache: any;
 
-  constructor(mnemonic: string, passphrase: string) {
+  constructor(mnemonic: string, passphrase: string, options?: LdsNetworkOptions) {
     this.mnemonic = mnemonic;
     this.passphrase = passphrase;
+    this.apiBaseUrl = options?.apiBaseUrl ?? "https://lightning.space/v1";
+    const host = options?.messageHost ?? "lightning.space";
+    this.message =
+      `By_signing_this_message,_you_confirm_to_${host}_that_you_are_the_sole_owner_of_the_provided_Blockchain_address._Your_ID:_`;
   }
 
   getUniqueId() {
@@ -84,14 +93,14 @@ export class LDS {
     return signature.toString("base64");
   }
 
-  static async createSession(address: string, signature: string) {
+  private async createSession(address: string, signature: string) {
     const data = {
       address,
       signature,
       wallet: 'DFX Bitcoin'
     };
 
-    const { accessToken } = await fetch(`${LDS.ldsUrl}/auth`, {
+    const { accessToken } = await fetch(`${this.apiBaseUrl}/auth`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -109,9 +118,9 @@ export class LDS {
 
     const address = this.getOnchainAssociatedAddress() as string;
     const signature = this.sign(`${this.message}${address}`);
-    const accessToken = await LDS.createSession(address, signature);
+    const accessToken = await this.createSession(address, signature);
 
-    const user = await fetch(`${LDS.ldsUrl}/user`, {
+    const user = await fetch(`${this.apiBaseUrl}/user`, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,

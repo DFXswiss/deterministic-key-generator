@@ -1,0 +1,61 @@
+// Copy this script to browser console on http://localhost:8090
+
+// Test parameters
+const mnemonic = 'hub easily force horn pull coast business rice cabbage shed around fence';
+const privateKeyWIF = 'KzF9AjZVYkVGyV3MAtDWs1BrMWq6jQzqwoeoSstFCMAw1UaALCDP';
+
+console.log('=== ARK CONSISTENCY TEST ===');
+
+// Step 1: Test the WIF key
+console.log('1. Testing WIF key:', privateKeyWIF);
+try {
+    const keyPair = libs.bitcoin.ECPair.fromWIF(privateKeyWIF, libs.bitcoin.networks.bitcoin);
+    console.log('   Private key hex:', keyPair.d.toBuffer(32).toString('hex'));
+    console.log('   Public key hex:', keyPair.getPublicKeyBuffer().toString('hex'));
+    console.log('   Network:', keyPair.network === libs.bitcoin.networks.bitcoin ? 'mainnet' : 'testnet');
+} catch (e) {
+    console.error('   Error:', e.message);
+}
+
+// Step 2: Test mnemonic derivation
+console.log('2. Testing mnemonic derivation...');
+try {
+    const seed = libs.bip39.mnemonicToSeed(mnemonic);
+    const rootKey = libs.bitcoin.HDNode.fromSeedBuffer(seed, libs.bitcoin.networks.bitcoin);
+    
+    // Test standard path m/44'/0'/0'/0/0
+    const path = "m/44'/0'/0'/0/0";
+    console.log('   Testing path:', path);
+    
+    let derived = rootKey;
+    const parts = ['44', '0', '0', '0', '0']; // all hardened except last two
+    
+    // m/44'/0'/0'/0/0
+    derived = derived.deriveHardened(44);  // 44'
+    derived = derived.deriveHardened(0);   // 0'  
+    derived = derived.deriveHardened(0);   // 0'
+    derived = derived.derive(0);           // 0
+    derived = derived.derive(0);           // 0
+    
+    const derivedWIF = derived.keyPair.toWIF();
+    console.log('   Derived WIF:', derivedWIF);
+    console.log('   Input WIF:', privateKeyWIF);
+    console.log('   Match:', derivedWIF === privateKeyWIF ? '✅ YES' : '❌ NO');
+    
+    if (derivedWIF !== privateKeyWIF) {
+        console.log('   Trying other paths...');
+        
+        // Try m/44'/0'/0'/0 
+        let test1 = rootKey.deriveHardened(44).deriveHardened(0).deriveHardened(0).derive(0);
+        console.log('   m/44\'/0\'/0\'/0:', test1.keyPair.toWIF() === privateKeyWIF ? '✅' : '❌');
+        
+        // Try m/0/0
+        let test2 = rootKey.derive(0).derive(0);
+        console.log('   m/0/0:', test2.keyPair.toWIF() === privateKeyWIF ? '✅' : '❌');
+    }
+    
+} catch (e) {
+    console.error('   Error:', e.message);
+}
+
+console.log('=== TEST COMPLETE ===');
